@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/zricethezav/gitleaks/v8/config"
+	Custom "github.com/zricethezav/gitleaks/v8/custom"
 	"github.com/zricethezav/gitleaks/v8/detect"
 	"github.com/zricethezav/gitleaks/v8/report"
 )
@@ -133,5 +134,12 @@ func runProtect(cmd *cobra.Command, args []string) {
 	}
 	if len(findings) != 0 {
 		os.Exit(exitCode)
+	}
+
+	// Set .git/config Gitleaks.(Custom.ConfigScanned) for sending audit data.
+	_, err = Custom.SetGitleaksConfig(Custom.ConfigScanned, "true")
+	if err != nil {
+		// don't exit on error, just log it
+		log.Error().Err(err).Msg("")
 	}
 }
