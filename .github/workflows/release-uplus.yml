@@ -5,7 +5,7 @@ on:
     branches:
       - 'master-uplus'
     tags:
-      - 'v*.*.*-uplus*'
+      - 'v*.*.*-uplus.*'
 
 jobs:
   Release-Gitleaks:
@@ -13,11 +13,16 @@ jobs:
     steps:
       - name: Check Out
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract tag name
+        id: tag_name
+        run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
       - name: Print Release Version
         run: |
-         echo "Tag name from GITHUB_REF_NAME: $GITHUB_REF_NAME"
-         echo "Tag name from github.ref_name: ${{  github.ref_name }}"
+         echo "Release Version is $TAG_NAME"
         
       - name: GoReleaser Action
         uses: goreleaser/goreleaser-action@v5.0.0
