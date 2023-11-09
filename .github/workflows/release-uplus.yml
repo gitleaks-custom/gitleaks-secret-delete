@@ -14,5 +14,7 @@ jobs:
       - name: Check Out
         uses: actions/checkout@v4
       - name: Release using .goreleaser.yaml
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
           goreleaser release --clean
