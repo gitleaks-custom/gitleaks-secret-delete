@@ -16,13 +16,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Extract tag name
-        id: tag_name
-        run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
-
       - name: Print Release Version
         run: |
-         echo "Release Version is $TAG_NAME"
+         echo `git tag | sort -V | tail -1`
         
       - name: GoReleaser Action
         uses: goreleaser/goreleaser-action@v5.0.0
