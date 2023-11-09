@@ -1,5 +1,5 @@
-name: GitHub Actions Demo
-run-name: Gitleaks Release
+name: Gitleaks Release
+run-name: Gitleaks Release Run
 on:
   push:
     branches:
