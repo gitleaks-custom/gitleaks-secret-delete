@@ -5,7 +5,7 @@ on:
     branches:
       - 'master-uplus'
     tags:
-      - v*.*.*-uplus*
+      - 'v*.*.*-uplus*'
 
 jobs:
   Release-Gitleaks:
@@ -13,8 +13,17 @@ jobs:
     steps:
       - name: Check Out
         uses: actions/checkout@v4
-      - name: Release using .goreleaser.yaml
+
+      - name: Print Release Version
+        run: |
+         echo "Tag name from GITHUB_REF_NAME: $GITHUB_REF_NAME"
+         echo "Tag name from github.ref_name: ${{  github.ref_name }}"
+        
+      - name: GoReleaser Action
+        uses: goreleaser/goreleaser-action@v5.0.0
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-        run: |
-          goreleaser release --clean
