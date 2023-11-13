@@ -22,17 +22,18 @@ func runDisable(cmd *cobra.Command, args []string) {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
 
-	// Remove Config in .git/config : Gitleaks.enable to false
-	// Custom.SetGitleaksConfig("enable", "false")
+	// Remove Gitleaks.enable in .git/config
 	Custom.DeleteGitleaksConfig(Custom.ConfigEnable)
 
-	// Remove Config in .git/config : Gitleaks.url to null
+	// Remove Gitleaks.url in .git/config
 	// Custom.SetGitleaksConfig("url", "")
 	Custom.DeleteGitleaksConfig(Custom.ConfigUrl)
 
-	// Remove Config in .git/config : Gitleaks.debug to false
-	// Custom.SetGitleaksConfig("debug", "false")
+	// Remove Gitleaks.debug in .git/config
 	Custom.DeleteGitleaksConfig(Custom.ConfigDebug)
+
+	// Remove Gitleaks.scanned in .git/config
+	Custom.DeleteGitleaksConfig(Custom.ConfigScanned)
 
 	// Remove Script in .git/hooks/pre-commit
 	Custom.DisableGitHooks(Custom.PreCommitScriptPath, Custom.PreCommitScript)

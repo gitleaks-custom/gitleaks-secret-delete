@@ -52,18 +52,22 @@ func runAudit(cmd *cobra.Command, args []string) {
 		return
 	}()
 
+	// 디버깅 옵션 활성시 로그 표시
 	debugging := Custom.GetGitleaksConfigBoolean(Custom.ConfigDebug)
 	if debugging {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
 
+	// Pre-Commit protect 단계에서 스캔 정상 완료 체크
 	isScanned := Custom.GetGitleaksConfigBoolean(Custom.ConfigScanned)
 	if !isScanned {
 		if debugging {
 			log.Error().Msg("Staged files are not scanned")
 		}
+		// protect 과정에서 비정상 종료 (secret 발견) 시 audit return
 		return
 	}
+
 	_, err := Custom.DeleteGitleaksConfig(Custom.ConfigScanned)
 	if err != nil {
 		// don't exit on error
