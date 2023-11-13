@@ -42,6 +42,7 @@ type AuditResponse struct {
 const (
 	auditResponseDataGitConfig = "GitConfig"
 	auditResponseDataVersion   = "Version"
+	auditResponseDataMessage   = "Message"
 )
 
 func runAudit(cmd *cobra.Command, args []string) {
@@ -125,15 +126,26 @@ func runAudit(cmd *cobra.Command, args []string) {
 		panic(err)
 	}
 
-	responseGitConfig := responseData.Data.(map[string]interface{})[auditResponseDataGitConfig].(map[string]interface{})
-	log.Debug().Interface("Body.Data.GitConfig", responseGitConfig).Msg("Response")
-	for k, v := range responseGitConfig {
-		Custom.SetGitleaksConfig(k, fmt.Sprintf("%v", v))
+	responseVersion := responseData.Data.(map[string]interface{})[auditResponseDataVersion]
+	if responseVersion != nil {
+		log.Debug().Interface("Body.Data.Version", responseVersion).Msg("Response")
 	}
 
-	responseVersion := responseData.Data.(map[string]interface{})[auditResponseDataVersion]
-	log.Debug().Interface("Body.Data.Version", responseVersion).Msg("Response")
+	responseMessage := responseData.Data.(map[string]interface{})[auditResponseDataMessage]
+	if responseMessage != nil {
+		log.Debug().Interface("Body.Data.Message", responseMessage).Msg("Response")
+		if responseVersion != Version {
+			log.Info().Msgf("%s", responseMessage)
+		}
+	}
 
+	responseGitConfig := responseData.Data.(map[string]interface{})[auditResponseDataGitConfig].(map[string]interface{})
+	if responseGitConfig != nil {
+		log.Debug().Interface("Body.Data.GitConfig", responseGitConfig).Msg("Response")
+		for k, v := range responseGitConfig {
+			Custom.SetGitleaksConfig(k, fmt.Sprintf("%v", v))
+		}
+	}
 }
 
 func retrieveLocalGitInfo() AuditRequest {
