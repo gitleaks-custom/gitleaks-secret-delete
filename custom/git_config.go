@@ -71,12 +71,12 @@ func local(key string) (string, error) {
 	return execGitCommand("config", "--get", "--null", "--local", key)
 }
 
-func GetLocalUserName() (string, error) {
-	return local("user.name")
+func GetUserName() (string, error) {
+	return entire("user.name")
 }
 
-func GetLocalUserEmail() (string, error) {
-	return local("user.email")
+func GetUserEmail() (string, error) {
+	return entire("user.email")
 }
 
 func GetHeadCommitHash() (string, error) {

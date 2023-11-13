@@ -40,9 +40,9 @@ type AuditResponse struct {
 }
 
 const (
-	auditResponseDataGitConfig = "GitConfig"
-	auditResponseDataVersion   = "Version"
-	auditResponseDataMessage   = "Message"
+	responseStringGitConfig = "GitConfig"
+	responseStringVersion   = "Version"
+	responseStringMessage   = "Message"
 )
 
 func runAudit(cmd *cobra.Command, args []string) {
@@ -116,9 +116,9 @@ func runAudit(cmd *cobra.Command, args []string) {
 	// Response Handling
 	response, _ := io.ReadAll(resp.Body)
 
+	// Response Handling
 	var responseData AuditResponse
 	log.Debug().RawJSON("Body", response).Msg("Response")
-	// Error During Json Unmarshaling - 백엔드 Response Type 변경 등
 	if err := json.Unmarshal([]byte(response), &responseData); err != nil {
 		if debugging {
 			log.Error().Msg("Json Unmarshal Error, " + err.Error())
@@ -126,24 +126,30 @@ func runAudit(cmd *cobra.Command, args []string) {
 		panic(err)
 	}
 
-	responseVersion := responseData.Data.(map[string]interface{})[auditResponseDataVersion]
-	if responseVersion != nil {
-		log.Debug().Interface("Body.Data.Version", responseVersion).Msg("Response")
+	data, ok := responseData.Data.(map[string]interface{})
+	if !ok {
+		// Data 필드가 map[string]interface{} 타입이 아님.
+		// 서버 Response 오류
+		log.Fatal().Err(err).Msg("")
 	}
 
-	responseMessage := responseData.Data.(map[string]interface{})[auditResponseDataMessage]
-	if responseMessage != nil {
-		log.Debug().Interface("Body.Data.Message", responseMessage).Msg("Response")
-		if responseVersion != Version {
-			log.Info().Msgf("%s", responseMessage)
+	// GitConfig 필드 처리
+	if gitConfig, isGitConfigRespond := data[responseStringGitConfig].(map[string]interface{}); isGitConfigRespond {
+		log.Debug().Interface("Body.Data."+responseStringGitConfig, gitConfig).Msg("Response")
+		for k, v := range gitConfig {
+			Custom.SetGitleaksConfig(k, fmt.Sprintf("%v", v))
 		}
 	}
 
-	responseGitConfig := responseData.Data.(map[string]interface{})[auditResponseDataGitConfig].(map[string]interface{})
-	if responseGitConfig != nil {
-		log.Debug().Interface("Body.Data.GitConfig", responseGitConfig).Msg("Response")
-		for k, v := range responseGitConfig {
-			Custom.SetGitleaksConfig(k, fmt.Sprintf("%v", v))
+	// Version, Message 필드 처리
+	version, isVersionRespond := data[responseStringVersion]
+	message, isMessageRespond := data[responseStringMessage]
+
+	if isVersionRespond && (version != Version) {
+		log.Debug().Interface("Body.Data."+responseStringVersion, version).Msg("Response")
+		if isMessageRespond {
+			log.Debug().Interface("Body.Data."+responseStringMessage, message).Msg("Response")
+			log.Info().Msgf("%s", message)
 		}
 	}
 }
@@ -152,8 +158,8 @@ func retrieveLocalGitInfo() AuditRequest {
 	OrganizationName, _ := Custom.GetLocalOrganizationName()
 	RepositoryName, _ := Custom.GetLocalRepositoryName()
 	BranchName, _ := Custom.GetHeadBranchName()
-	AuthorName, _ := Custom.GetLocalUserName()
-	AuthorEmail, _ := Custom.GetLocalUserEmail()
+	AuthorName, _ := Custom.GetUserName()
+	AuthorEmail, _ := Custom.GetUserEmail()
 	CommitHash, _ := Custom.GetHeadCommitHash()
 	CommitTimestamp, _ := Custom.GetHeadCommitTimestamp()
 
