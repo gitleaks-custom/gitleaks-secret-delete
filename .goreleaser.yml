@@ -34,7 +34,9 @@ archives:
         format: zip
 
 checksum:
-  name_template: 'checksums.txt'
+  name_template: 'checksums_{{ .Version }}.txt'
+  algorithm: sha256
+
 snapshot:
   name_template: "{{ incpatch .Version }}-next"
 changelog:
