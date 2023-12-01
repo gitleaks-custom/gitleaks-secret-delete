@@ -7,7 +7,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	Custom "github.com/zricethezav/gitleaks/v8/custom"
+	"github.com/zricethezav/gitleaks/v8/ucmp"
 	"io"
 	"net/http"
 	"net/url"
@@ -52,30 +52,18 @@ func runAudit(cmd *cobra.Command, args []string) {
 		return
 	}()
 
+	log.Debug().Msg(fmt.Sprintf("UserAgent, %s", ucmp.Auth.UserAgent))
+	log.Debug().Msg(fmt.Sprintf("checksum, %s", ucmp.Auth.BinaryCheckSum))
+	log.Debug().Msg(fmt.Sprintf("email, %s", ucmp.Auth.Email))
+
 	// 디버깅 옵션 활성시 로그 표시
-	debugging := Custom.GetGitleaksConfigBoolean(Custom.ConfigDebug)
+	debugging := ucmp.GetGitleaksConfigBoolean(ucmp.ConfigDebug)
 	if debugging {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
 
-	// Pre-Commit protect 단계에서 스캔 정상 완료 체크
-	isScanned := Custom.GetGitleaksConfigBoolean(Custom.ConfigScanned)
-	if !isScanned {
-		if debugging {
-			log.Error().Msg("Staged files are not scanned")
-		}
-		// protect 과정에서 비정상 종료 (secret 발견) 시 audit return
-		return
-	}
-
-	_, err := Custom.DeleteGitleaksConfig(Custom.ConfigScanned)
-	if err != nil {
-		// don't exit on error
-		log.Error().Err(err).Msg("")
-	}
-
-	isEnable := Custom.GetGitleaksConfigBoolean(Custom.ConfigEnable)
-	// isDebug := Custom.GetGitleaksConfigBoolean("debug")
+	// Check .git/config - Gitleaks.Enable
+	isEnable := ucmp.GetGitleaksConfigBoolean(ucmp.ConfigEnable)
 	if !isEnable {
 		if debugging {
 			log.Error().Msg("Gitleaks is not enabled")
@@ -83,7 +71,31 @@ func runAudit(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	backendUrl, _ := Custom.GetGitleaksConfig(Custom.ConfigUrl)
+	// Check .git/config - Gitleaks.Scanned
+	isScanned := ucmp.GetGitleaksConfigBoolean(ucmp.ConfigScanned)
+	if !isScanned {
+		if debugging {
+			log.Error().Msg("Staged files are not scanned")
+		}
+		// Pre-commmit (gitleaks protect) 단계에서 종료시
+		// 1. Secret 발견
+		// 2. Pre-commit (gitleaks protect) 미 수행
+		return
+	}
+
+	_, err := ucmp.DeleteGitleaksConfig(ucmp.ConfigScanned)
+	if err != nil {
+		// don't exit on error
+		log.Error().Err(err).Msg("")
+	}
+
+	// Check Email is lguplus.co.kr or lgupluspartners.co.kr
+	if !ucmp.Auth.CheckValidEmail() {
+		log.Error().Msg("Email is not lguplus.co.kr or lgupluspartners.co.kr")
+		return
+	}
+
+	backendUrl, _ := ucmp.GetGitleaksConfig(ucmp.ConfigUrl)
 
 	log.Debug().Str("Url", backendUrl).Msg("Request")
 
@@ -98,11 +110,11 @@ func runAudit(cmd *cobra.Command, args []string) {
 
 	// Request Handling
 	requestData, _ := json.Marshal(retrieveLocalGitInfo())
-	requestUserAgent := Custom.UserAgentPrefix + "/" + Version
 
 	req, _ := http.NewRequest("POST", u.String(), bytes.NewBuffer(requestData))
-	req.Header.Set("User-Agent", requestUserAgent)
 	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
+	req.Header.Set("User-Agent", ucmp.Auth.UserAgent+"/"+Version)
+	req.SetBasicAuth(Version, ucmp.Auth.BinaryCheckSum)
 
 	log.Debug().RawJSON("Body", requestData).Msg("Request")
 
@@ -138,10 +150,11 @@ func runAudit(cmd *cobra.Command, args []string) {
 	}
 
 	// GitConfig 필드 처리
+	// TODO: enable false 로 응답 받은 경우 post-commit 삭제 필요.
 	if gitConfig, isGitConfigRespond := data[responseStringGitConfig].(map[string]interface{}); isGitConfigRespond {
 		log.Debug().Interface("Body.Data."+responseStringGitConfig, gitConfig).Msg("Response")
 		for k, v := range gitConfig {
-			Custom.SetGitleaksConfig(k, fmt.Sprintf("%v", v))
+			ucmp.SetGitleaksConfig(k, fmt.Sprintf("%v", v))
 		}
 	}
 
@@ -159,13 +172,13 @@ func runAudit(cmd *cobra.Command, args []string) {
 }
 
 func retrieveLocalGitInfo() AuditRequest {
-	OrganizationName, _ := Custom.GetLocalOrganizationName()
-	RepositoryName, _ := Custom.GetLocalRepositoryName()
-	BranchName, _ := Custom.GetHeadBranchName()
-	AuthorName, _ := Custom.GetUserName()
-	AuthorEmail, _ := Custom.GetUserEmail()
-	CommitHash, _ := Custom.GetHeadCommitHash()
-	CommitTimestamp, _ := Custom.GetHeadCommitTimestamp()
+	OrganizationName, _ := ucmp.GetLocalOrganizationName()
+	RepositoryName, _ := ucmp.GetLocalRepositoryName()
+	BranchName, _ := ucmp.GetHeadBranchName()
+	AuthorName, _ := ucmp.GetUserName()
+	AuthorEmail, _ := ucmp.GetUserEmail()
+	CommitHash, _ := ucmp.GetHeadCommitHash()
+	CommitTimestamp, _ := ucmp.GetHeadCommitTimestamp()
 
 	return AuditRequest{
 		OrganizationName,
