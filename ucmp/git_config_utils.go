@@ -1,4 +1,4 @@
-package lib
+package ucmp
 
 import (
 	"bytes"
@@ -12,11 +12,10 @@ import (
 )
 
 const (
-	ConfigDebug     = "debug"
-	ConfigEnable    = "enable"
-	ConfigScanned   = "scanned"
-	ConfigUrl       = "url"
-	UserAgentPrefix = "Gitleaks"
+	ConfigDebug   = "debug"
+	ConfigEnable  = "enable"
+	ConfigScanned = "scanned"
+	ConfigUrl     = "url"
 )
 
 type ErrNotFound struct {
