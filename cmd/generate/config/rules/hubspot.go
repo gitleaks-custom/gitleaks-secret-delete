@@ -10,9 +10,9 @@ func HubSpot() *config.Rule {
 		Description: "HubSpot API Token",
 		RuleID:      "hubspot-api-key",
 		Regex: generateSemiGenericRegex([]string{"hubspot"},
-			`[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}`),
-		SecretGroup: 1,
-		Keywords:    []string{"hubspot"},
+			`[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}`, true),
+
+		Keywords: []string{"hubspot"},
 	}
 
 	// validate

@@ -10,8 +10,7 @@ func AdafruitAPIKey() *config.Rule {
 	r := config.Rule{
 		Description: "Adafruit API Key",
 		RuleID:      "adafruit-api-key",
-		Regex:       generateSemiGenericRegex([]string{"adafruit"}, alphaNumericExtendedShort("32")),
-		SecretGroup: 1,
+		Regex:       generateSemiGenericRegex([]string{"adafruit"}, alphaNumericExtendedShort("32"), true),
 		Keywords:    []string{"adafruit"},
 	}
 

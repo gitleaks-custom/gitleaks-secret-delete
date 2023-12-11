@@ -10,9 +10,9 @@ func DropBoxAPISecret() *config.Rule {
 	r := config.Rule{
 		Description: "Dropbox API secret",
 		RuleID:      "dropbox-api-token",
-		Regex:       generateSemiGenericRegex([]string{"dropbox"}, alphaNumeric("15")),
-		SecretGroup: 1,
-		Keywords:    []string{"dropbox"},
+		Regex:       generateSemiGenericRegex([]string{"dropbox"}, alphaNumeric("15"), true),
+
+		Keywords: []string{"dropbox"},
 	}
 
 	// validate
@@ -27,7 +27,7 @@ func DropBoxShortLivedAPIToken() *config.Rule {
 	r := config.Rule{
 		RuleID:      "dropbox-short-lived-api-token",
 		Description: "Dropbox short lived API token",
-		Regex:       generateSemiGenericRegex([]string{"dropbox"}, `sl\.[a-z0-9\-=_]{135}`),
+		Regex:       generateSemiGenericRegex([]string{"dropbox"}, `sl\.[a-z0-9\-=_]{135}`, true),
 		Keywords:    []string{"dropbox"},
 	}
 
@@ -40,7 +40,7 @@ func DropBoxLongLivedAPIToken() *config.Rule {
 	r := config.Rule{
 		RuleID:      "dropbox-long-lived-api-token",
 		Description: "Dropbox long lived API token",
-		Regex:       generateSemiGenericRegex([]string{"dropbox"}, `[a-z0-9]{11}(AAAAAAAAAA)[a-z0-9\-_=]{43}`),
+		Regex:       generateSemiGenericRegex([]string{"dropbox"}, `[a-z0-9]{11}(AAAAAAAAAA)[a-z0-9\-_=]{43}`, true),
 		Keywords:    []string{"dropbox"},
 	}
 

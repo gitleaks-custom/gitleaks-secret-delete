@@ -10,8 +10,8 @@ func Prefect() *config.Rule {
 	r := config.Rule{
 		RuleID:      "prefect-api-token",
 		Description: "Prefect API token",
-		Regex:       generateUniqueTokenRegex(`pnu_[a-z0-9]{36}`),
-		SecretGroup: 1,
+		Regex:       generateUniqueTokenRegex(`pnu_[a-z0-9]{36}`, true),
+
 		Keywords: []string{
 			"pnu_",
 		},

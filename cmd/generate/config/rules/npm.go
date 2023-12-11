@@ -10,8 +10,8 @@ func NPM() *config.Rule {
 	r := config.Rule{
 		RuleID:      "npm-access-token",
 		Description: "npm access token",
-		Regex:       generateUniqueTokenRegex(`npm_[a-z0-9]{36}`),
-		SecretGroup: 1,
+		Regex:       generateUniqueTokenRegex(`npm_[a-z0-9]{36}`, true),
+
 		Keywords: []string{
 			"npm_",
 		},

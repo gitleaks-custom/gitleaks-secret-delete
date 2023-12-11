@@ -11,8 +11,8 @@ func NetlifyAccessToken() *config.Rule {
 		RuleID:      "netlify-access-token",
 		Description: "Netlify Access Token",
 		Regex: generateSemiGenericRegex([]string{"netlify"},
-			alphaNumericExtended("40,46")),
-		SecretGroup: 1,
+			alphaNumericExtended("40,46"), true),
+
 		Keywords: []string{
 			"netlify",
 		},

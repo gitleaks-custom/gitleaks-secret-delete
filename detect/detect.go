@@ -17,9 +17,10 @@ import (
 	"github.com/zricethezav/gitleaks/v8/detect/git"
 	"github.com/zricethezav/gitleaks/v8/report"
 
+	ahocorasick "github.com/BobuSumisu/aho-corasick"
 	"github.com/fatih/semgroup"
 	"github.com/gitleaks/go-gitdiff/gitdiff"
-	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
+
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 )
@@ -36,6 +37,7 @@ const (
 	ProtectStagedType
 
 	gitleaksAllowSignature = "gitleaks:allow"
+	chunkSize              = 10 * 1_000 // 10kb
 )
 
 // Detector is the main detector struct
@@ -46,7 +48,7 @@ type Detector struct {
 	// Redact is a flag to redact findings. This is exported
 	// so users using gitleaks as a library can set this flag
 	// without calling `detector.Start(cmd *cobra.Command)`
-	Redact bool
+	Redact uint
 
 	// verbose is a flag to print findings
 	Verbose bool
@@ -59,6 +61,9 @@ type Detector struct {
 
 	// NoColor is a flag to disable color output
 	NoColor bool
+
+	// IgnoreGitleaksAllow is a flag to ignore gitleaks:allow comments.
+	IgnoreGitleaksAllow bool
 
 	// commitMap is used to keep track of commits that have been scanned.
 	// This is only used for logging purposes and git scans.
@@ -75,7 +80,7 @@ type Detector struct {
 
 	// prefilter is a ahocorasick struct used for doing efficient string
 	// matching given a set of words (keywords from the rules in the config)
-	prefilter ahocorasick.AhoCorasick
+	prefilter ahocorasick.Trie
 
 	// a list of known findings that should be ignored
 	baseline []report.Finding
@@ -110,20 +115,13 @@ type Fragment struct {
 
 // NewDetector creates a new detector with the given config
 func NewDetector(cfg config.Config) *Detector {
-	builder := ahocorasick.NewAhoCorasickBuilder(ahocorasick.Opts{
-		AsciiCaseInsensitive: true,
-		MatchOnlyWholeWords:  false,
-		MatchKind:            ahocorasick.LeftMostLongestMatch,
-		DFA:                  true,
-	})
-
 	return &Detector{
 		commitMap:      make(map[string]bool),
 		gitleaksIgnore: make(map[string]bool),
 		findingMutex:   &sync.Mutex{},
 		findings:       make([]report.Finding, 0),
 		Config:         cfg,
-		prefilter:      builder.Build(cfg.Keywords),
+		prefilter:      *ahocorasick.NewTrieBuilder().AddStrings(cfg.Keywords).Build(),
 	}
 }
 
@@ -223,7 +221,7 @@ func (d *Detector) detectRule(fragment Fragment, rule config.Rule) []report.Find
 
 	if rule.Path != nil && rule.Regex == nil {
 		// Path _only_ rule
-		if rule.Path.Match([]byte(fragment.FilePath)) {
+		if rule.Path.MatchString(fragment.FilePath) {
 			finding := report.Finding{
 				Description: rule.Description,
 				File:        fragment.FilePath,
@@ -238,7 +236,7 @@ func (d *Detector) detectRule(fragment Fragment, rule config.Rule) []report.Find
 		// if path is set _and_ a regex is set, then we need to check both
 		// so if the path does not match, then we should return early and not
 		// consider the regex
-		if !rule.Path.Match([]byte(fragment.FilePath)) {
+		if !rule.Path.MatchString(fragment.FilePath) {
 			return findings
 		}
 	}
@@ -288,13 +286,22 @@ func (d *Detector) detectRule(fragment Fragment, rule config.Rule) []report.Find
 		}
 
 		if strings.Contains(fragment.Raw[loc.startLineIndex:loc.endLineIndex],
-			gitleaksAllowSignature) {
+			gitleaksAllowSignature) && !d.IgnoreGitleaksAllow {
 			continue
 		}
 
-		// extract secret from secret group if set
-		if rule.SecretGroup != 0 {
-			groups := rule.Regex.FindStringSubmatch(secret)
+		// by default if secret group is not set, we will check to see if there
+		// are any capture groups. If there are, we will use the first capture to start
+		groups := rule.Regex.FindStringSubmatch(secret)
+		if rule.SecretGroup == 0 {
+			// if len(groups) == 2 that means there is only one capture group
+			// the first element in groups is the full match, the second is the
+			// first capture group
+			if len(groups) == 2 {
+				secret = groups[1]
+				finding.Secret = secret
+			}
+		} else {
 			if len(groups) <= rule.SecretGroup || len(groups) == 0 {
 				// Config validation should prevent this
 				continue
@@ -496,31 +503,49 @@ func (d *Detector) DetectFiles(source string) ([]report.Finding, error) {
 	for pa := range paths {
 		p := pa
 		s.Go(func() error {
-			b, err := os.ReadFile(p.Path)
+			f, err := os.Open(p.Path)
 			if err != nil {
 				return err
 			}
+			defer f.Close()
 
-			mimetype, err := filetype.Match(b)
-			if err != nil {
-				return err
-			}
-			if mimetype.MIME.Type == "application" {
-				return nil // skip binary files
-			}
+			// Buffer to hold file chunks
+			buf := make([]byte, chunkSize)
+			totalLines := 0
+			for {
+				n, err := f.Read(buf)
+				if err != nil && err != io.EOF {
+					return err
+				}
+				if n == 0 {
+					break
+				}
 
-			fragment := Fragment{
-				Raw:      string(b),
-				FilePath: p.Path,
-			}
-			if p.Symlink != "" {
-				fragment.SymlinkFile = p.Symlink
-			}
-			for _, finding := range d.Detect(fragment) {
-				// need to add 1 since line counting starts at 1
-				finding.EndLine++
-				finding.StartLine++
-				d.addFinding(finding)
+				// TODO: optimization could be introduced here
+				mimetype, err := filetype.Match(buf[:n])
+				if err != nil {
+					return err
+				}
+				if mimetype.MIME.Type == "application" {
+					return nil // skip binary files
+				}
+
+				// Count the number of newlines in this chunk
+				linesInChunk := strings.Count(string(buf[:n]), "\n")
+				totalLines += linesInChunk
+				fragment := Fragment{
+					Raw:      string(buf[:n]),
+					FilePath: p.Path,
+				}
+				if p.Symlink != "" {
+					fragment.SymlinkFile = p.Symlink
+				}
+				for _, finding := range d.Detect(fragment) {
+					// need to add 1 since line counting starts at 1
+					finding.StartLine += (totalLines - linesInChunk) + 1
+					finding.EndLine += (totalLines - linesInChunk) + 1
+					d.addFinding(finding)
+				}
 			}
 
 			return nil
@@ -582,9 +607,9 @@ func (d *Detector) Detect(fragment Fragment) []report.Finding {
 
 	// build keyword map for prefiltering rules
 	normalizedRaw := strings.ToLower(fragment.Raw)
-	matches := d.prefilter.FindAll(normalizedRaw)
+	matches := d.prefilter.MatchString(normalizedRaw)
 	for _, m := range matches {
-		fragment.keywords[normalizedRaw[m.Start():m.End()]] = true
+		fragment.keywords[normalizedRaw[m.Pos():int(m.Pos())+len(m.Match())]] = true
 	}
 
 	for _, rule := range d.Config.Rules {

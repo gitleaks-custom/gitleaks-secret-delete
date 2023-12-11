@@ -10,8 +10,8 @@ func SquareSpaceAccessToken() *config.Rule {
 	r := config.Rule{
 		RuleID:      "squarespace-access-token",
 		Description: "Squarespace Access Token",
-		Regex:       generateSemiGenericRegex([]string{"squarespace"}, hex8_4_4_4_12()),
-		SecretGroup: 1,
+		Regex:       generateSemiGenericRegex([]string{"squarespace"}, hex8_4_4_4_12(), true),
+
 		Keywords: []string{
 			"squarespace",
 		},

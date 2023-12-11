@@ -3,8 +3,10 @@ package cmd
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -20,6 +22,7 @@ func init() {
 	detectCmd.Flags().Bool("no-git", false, "treat git repo as a regular directory and scan those files, --log-opts has no effect on the scan when --no-git is set")
 	detectCmd.Flags().Bool("pipe", false, "scan input from stdin, ex: `cat some_file | gitleaks detect --pipe`")
 	detectCmd.Flags().Bool("follow-symlinks", false, "scan files that are symlinks to other files")
+	detectCmd.Flags().StringSlice("enable-rule", []string{}, "only enable specific rules by id, ex: `gitleaks detect --enable-rule=atlassian-api-token --enable-rule=slack-access-token`")
 	detectCmd.Flags().StringP("gitleaks-ignore-path", "i", ".", "path to .gitleaksignore file or folder containing one")
 }
 
@@ -52,6 +55,17 @@ func runDetect(cmd *cobra.Command, args []string) {
 
 	// Setup detector
 	detector := detect.NewDetector(cfg)
+	// set color flag at first
+	if detector.NoColor, err = cmd.Flags().GetBool("no-color"); err != nil {
+		log.Fatal().Err(err).Msg("")
+	}
+	// also init logger again without color
+	if detector.NoColor {
+		log.Logger = log.Output(zerolog.ConsoleWriter{
+			Out:     os.Stderr,
+			NoColor: detector.NoColor,
+		})
+	}
 	detector.Config.Path, err = cmd.Flags().GetString("config")
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
@@ -70,14 +84,14 @@ func runDetect(cmd *cobra.Command, args []string) {
 		log.Fatal().Err(err).Msg("")
 	}
 	// set redact flag
-	if detector.Redact, err = cmd.Flags().GetBool("redact"); err != nil {
+	if detector.Redact, err = cmd.Flags().GetUint("redact"); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 	if detector.MaxTargetMegaBytes, err = cmd.Flags().GetInt("max-target-megabytes"); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
-	// set color flag
-	if detector.NoColor, err = cmd.Flags().GetBool("no-color"); err != nil {
+	// set ignore gitleaks:allow flag
+	if detector.IgnoreGitleaksAllow, err = cmd.Flags().GetBool("ignore-gitleaks-allow"); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 
@@ -111,6 +125,21 @@ func runDetect(cmd *cobra.Command, args []string) {
 		if err != nil {
 			log.Error().Msgf("Could not load baseline. The path must point of a gitleaks report generated using the default format: %s", err)
 		}
+	}
+
+	// If set, only apply rules that are defined in the flag
+	rules, _ := cmd.Flags().GetStringSlice("enable-rule")
+	if len(rules) > 0 {
+		log.Info().Msg("Overriding enabled rules: " + strings.Join(rules, ", "))
+		ruleOverride := make(map[string]config.Rule)
+		for _, ruleName := range rules {
+			if rule, ok := cfg.Rules[ruleName]; ok {
+				ruleOverride[ruleName] = rule
+			} else {
+				log.Fatal().Msgf("Requested rule %s not found in rules", ruleName)
+			}
+		}
+		detector.Config.Rules = ruleOverride
 	}
 
 	// set follow symlinks flag

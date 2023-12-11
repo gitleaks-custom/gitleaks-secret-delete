@@ -10,7 +10,7 @@ func AlibabaAccessKey() *config.Rule {
 	r := config.Rule{
 		Description: "Alibaba AccessKey ID",
 		RuleID:      "alibaba-access-key-id",
-		Regex:       generateUniqueTokenRegex(`(LTAI)(?i)[a-z0-9]{20}`),
+		Regex:       generateUniqueTokenRegex(`(LTAI)(?i)[a-z0-9]{20}`, true),
 		Keywords:    []string{"LTAI"},
 	}
 
@@ -28,9 +28,9 @@ func AlibabaSecretKey() *config.Rule {
 		Description: "Alibaba Secret Key",
 		RuleID:      "alibaba-secret-key",
 		Regex: generateSemiGenericRegex([]string{"alibaba"},
-			alphaNumeric("30")),
-		SecretGroup: 1,
-		Keywords:    []string{"alibaba"},
+			alphaNumeric("30"), true),
+
+		Keywords: []string{"alibaba"},
 	}
 
 	// validate

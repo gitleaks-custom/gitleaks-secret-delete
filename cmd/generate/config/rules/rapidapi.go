@@ -11,8 +11,8 @@ func RapidAPIAccessToken() *config.Rule {
 		RuleID:      "rapidapi-access-token",
 		Description: "RapidAPI Access Token",
 		Regex: generateSemiGenericRegex([]string{"rapidapi"},
-			alphaNumericExtendedShort("50")),
-		SecretGroup: 1,
+			alphaNumericExtendedShort("50"), true),
+
 		Keywords: []string{
 			"rapidapi",
 		},

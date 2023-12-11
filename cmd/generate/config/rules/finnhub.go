@@ -10,8 +10,8 @@ func FinnhubAccessToken() *config.Rule {
 	r := config.Rule{
 		RuleID:      "finnhub-access-token",
 		Description: "Finnhub Access Token",
-		Regex:       generateSemiGenericRegex([]string{"finnhub"}, alphaNumeric("20")),
-		SecretGroup: 1,
+		Regex:       generateSemiGenericRegex([]string{"finnhub"}, alphaNumeric("20"), true),
+
 		Keywords: []string{
 			"finnhub",
 		},

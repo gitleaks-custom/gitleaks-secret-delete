@@ -13,8 +13,8 @@ func LinkedinClientSecret() *config.Rule {
 		Regex: generateSemiGenericRegex([]string{
 			"linkedin",
 			"linked-in",
-		}, alphaNumeric("16")),
-		SecretGroup: 1,
+		}, alphaNumeric("16"), true),
+
 		Keywords: []string{
 			"linkedin",
 			"linked-in",
@@ -36,8 +36,8 @@ func LinkedinClientID() *config.Rule {
 		Regex: generateSemiGenericRegex([]string{
 			"linkedin",
 			"linked-in",
-		}, alphaNumeric("14")),
-		SecretGroup: 1,
+		}, alphaNumeric("14"), true),
+
 		Keywords: []string{
 			"linkedin",
 			"linked-in",

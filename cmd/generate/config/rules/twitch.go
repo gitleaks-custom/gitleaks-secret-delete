@@ -10,8 +10,7 @@ func TwitchAPIToken() *config.Rule {
 	r := config.Rule{
 		RuleID:      "twitch-api-token",
 		Description: "Twitch API token",
-		Regex:       generateSemiGenericRegex([]string{"twitch"}, alphaNumeric("30")),
-		SecretGroup: 1,
+		Regex:       generateSemiGenericRegex([]string{"twitch"}, alphaNumeric("30"), true),
 		Keywords: []string{
 			"twitch",
 		},

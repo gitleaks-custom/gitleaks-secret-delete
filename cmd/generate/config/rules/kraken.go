@@ -11,8 +11,8 @@ func KrakenAccessToken() *config.Rule {
 		RuleID:      "kraken-access-token",
 		Description: "Kraken Access Token",
 		Regex: generateSemiGenericRegex([]string{"kraken"},
-			alphaNumericExtendedLong("80,90")),
-		SecretGroup: 1,
+			alphaNumericExtendedLong("80,90"), true),
+
 		Keywords: []string{
 			"kraken",
 		},

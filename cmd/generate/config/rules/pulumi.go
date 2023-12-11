@@ -10,8 +10,8 @@ func PulumiAPIToken() *config.Rule {
 	r := config.Rule{
 		RuleID:      "pulumi-api-token",
 		Description: "Pulumi API token",
-		Regex:       generateUniqueTokenRegex(`pul-[a-f0-9]{40}`),
-		SecretGroup: 1,
+		Regex:       generateUniqueTokenRegex(`pul-[a-f0-9]{40}`, true),
+
 		Keywords: []string{
 			"pul-",
 		},

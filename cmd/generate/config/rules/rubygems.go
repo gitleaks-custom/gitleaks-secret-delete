@@ -10,8 +10,8 @@ func RubyGemsAPIToken() *config.Rule {
 	r := config.Rule{
 		RuleID:      "rubygems-api-token",
 		Description: "Rubygem API token",
-		Regex:       generateUniqueTokenRegex(`rubygems_[a-f0-9]{48}`),
-		SecretGroup: 1,
+		Regex:       generateUniqueTokenRegex(`rubygems_[a-f0-9]{48}`, true),
+
 		Keywords: []string{
 			"rubygems_",
 		},

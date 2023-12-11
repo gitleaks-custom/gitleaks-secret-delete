@@ -14,8 +14,8 @@ func MessageBirdAPIToken() *config.Rule {
 			"messagebird",
 			"message-bird",
 			"message_bird",
-		}, alphaNumeric("25")),
-		SecretGroup: 1,
+		}, alphaNumeric("25"), true),
+
 		Keywords: []string{
 			"messagebird",
 			"message-bird",
@@ -41,8 +41,8 @@ func MessageBirdClientID() *config.Rule {
 			"messagebird",
 			"message-bird",
 			"message_bird",
-		}, hex8_4_4_4_12()),
-		SecretGroup: 1,
+		}, hex8_4_4_4_12(), true),
+
 		Keywords: []string{
 			"messagebird",
 			"message-bird",

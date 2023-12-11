@@ -14,11 +14,9 @@ format:
 	go fmt ./...
 
 test: format
-	go vet ./...
 	go test -v ./... --race $(PKG) 
 
 build: format
-	go vet ./...
 	go mod tidy
 	go build $(LDFLAGS)
 

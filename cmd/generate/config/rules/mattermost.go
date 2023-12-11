@@ -10,8 +10,8 @@ func MattermostAccessToken() *config.Rule {
 	r := config.Rule{
 		RuleID:      "mattermost-access-token",
 		Description: "Mattermost Access Token",
-		Regex:       generateSemiGenericRegex([]string{"mattermost"}, alphaNumeric("26")),
-		SecretGroup: 1,
+		Regex:       generateSemiGenericRegex([]string{"mattermost"}, alphaNumeric("26"), true),
+
 		Keywords: []string{
 			"mattermost",
 		},

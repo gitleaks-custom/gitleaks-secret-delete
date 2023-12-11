@@ -10,9 +10,9 @@ func FinicityClientSecret() *config.Rule {
 	r := config.Rule{
 		Description: "Finicity Client Secret",
 		RuleID:      "finicity-client-secret",
-		Regex:       generateSemiGenericRegex([]string{"finicity"}, alphaNumeric("20")),
-		SecretGroup: 1,
-		Keywords:    []string{"finicity"},
+		Regex:       generateSemiGenericRegex([]string{"finicity"}, alphaNumeric("20"), true),
+
+		Keywords: []string{"finicity"},
 	}
 
 	// validate
@@ -27,9 +27,9 @@ func FinicityAPIToken() *config.Rule {
 	r := config.Rule{
 		Description: "Finicity API token",
 		RuleID:      "finicity-api-token",
-		Regex:       generateSemiGenericRegex([]string{"finicity"}, hex("32")),
-		SecretGroup: 1,
-		Keywords:    []string{"finicity"},
+		Regex:       generateSemiGenericRegex([]string{"finicity"}, hex("32"), true),
+
+		Keywords: []string{"finicity"},
 	}
 
 	// validate

@@ -10,8 +10,8 @@ func TrelloAccessToken() *config.Rule {
 	r := config.Rule{
 		RuleID:      "trello-access-token",
 		Description: "Trello Access Token",
-		Regex:       generateSemiGenericRegex([]string{"trello"}, `[a-zA-Z-0-9]{32}`),
-		SecretGroup: 1,
+		Regex:       generateSemiGenericRegex([]string{"trello"}, `[a-zA-Z-0-9]{32}`, true),
+
 		Keywords: []string{
 			"trello",
 		},

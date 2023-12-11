@@ -10,8 +10,7 @@ func Airtable() *config.Rule {
 	r := config.Rule{
 		Description: "Airtable API Key",
 		RuleID:      "airtable-api-key",
-		Regex:       generateSemiGenericRegex([]string{"airtable"}, alphaNumeric("17")),
-		SecretGroup: 1,
+		Regex:       generateSemiGenericRegex([]string{"airtable"}, alphaNumeric("17"), true),
 		Keywords:    []string{"airtable"},
 	}
 

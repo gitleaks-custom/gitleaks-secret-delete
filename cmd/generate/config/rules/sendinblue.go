@@ -10,8 +10,8 @@ func SendInBlueAPIToken() *config.Rule {
 	r := config.Rule{
 		RuleID:      "sendinblue-api-token",
 		Description: "Sendinblue API token",
-		Regex:       generateUniqueTokenRegex(`xkeysib-[a-f0-9]{64}\-(?i)[a-z0-9]{16}`),
-		SecretGroup: 1,
+		Regex:       generateUniqueTokenRegex(`xkeysib-[a-f0-9]{64}\-(?i)[a-z0-9]{16}`, true),
+
 		Keywords: []string{
 			"xkeysib-",
 		},

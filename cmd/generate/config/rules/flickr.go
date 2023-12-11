@@ -10,8 +10,8 @@ func FlickrAccessToken() *config.Rule {
 	r := config.Rule{
 		RuleID:      "flickr-access-token",
 		Description: "Flickr Access Token",
-		Regex:       generateSemiGenericRegex([]string{"flickr"}, alphaNumeric("32")),
-		SecretGroup: 1,
+		Regex:       generateSemiGenericRegex([]string{"flickr"}, alphaNumeric("32"), true),
+
 		Keywords: []string{
 			"flickr",
 		},

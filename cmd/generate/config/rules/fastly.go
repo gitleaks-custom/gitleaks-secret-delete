@@ -10,9 +10,9 @@ func FastlyAPIToken() *config.Rule {
 	r := config.Rule{
 		Description: "Fastly API key",
 		RuleID:      "fastly-api-token",
-		Regex:       generateSemiGenericRegex([]string{"fastly"}, alphaNumericExtended("32")),
-		SecretGroup: 1,
-		Keywords:    []string{"fastly"},
+		Regex:       generateSemiGenericRegex([]string{"fastly"}, alphaNumericExtended("32"), true),
+
+		Keywords: []string{"fastly"},
 	}
 
 	// validate

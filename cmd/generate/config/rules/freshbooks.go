@@ -10,8 +10,8 @@ func FreshbooksAccessToken() *config.Rule {
 	r := config.Rule{
 		RuleID:      "freshbooks-access-token",
 		Description: "Freshbooks Access Token",
-		Regex:       generateSemiGenericRegex([]string{"freshbooks"}, alphaNumeric("64")),
-		SecretGroup: 1,
+		Regex:       generateSemiGenericRegex([]string{"freshbooks"}, alphaNumeric("64"), true),
+
 		Keywords: []string{
 			"freshbooks",
 		},
