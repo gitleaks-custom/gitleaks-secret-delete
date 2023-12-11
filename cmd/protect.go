@@ -136,10 +136,7 @@ func runProtect(cmd *cobra.Command, args []string) {
 		os.Exit(exitCode)
 	}
 
-	// Set .git/config Gitleaks.(Custom.ConfigScanned) for sending audit data.
-	_, err = ucmp.SetGitleaksConfig(ucmp.ConfigScanned, "true")
-	if err != nil {
-		// don't exit on error, just log it
-		log.Error().Err(err).Msg("")
-	}
+	// When scan is Complete, Mark scanned = true in local repository config file (.git/config)
+	auditConfig := ucmp.GetAuditConfigInstance()
+	auditConfig.SetAuditConfig(ucmp.GIT_SCOPE_LOCAL, ucmp.AUDIT_CONFIG_KEY_SCANNED, true)
 }

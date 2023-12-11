@@ -5,12 +5,13 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/zricethezav/gitleaks/v8/ucmp"
-	"strconv"
+	"os"
 )
 
 func init() {
-	enableCmd.Flags().String("url", "", "Backend URL")
-	enableCmd.Flags().Bool("debug", false, "Enable debug output")
+	enableCmd.Flags().String(string(ucmp.AUDIT_CONFIG_KEY_URL), "", "Audit Backend Url (Default : https://audit.ucmp.uplus.co.kr/gitleaks/)")
+	enableCmd.Flags().Bool(string(ucmp.AUDIT_CONFIG_KEY_DEBUG), false, "Enable debug output")
+	enableCmd.MarkFlagRequired(string(ucmp.AUDIT_CONFIG_KEY_URL))
 	rootCmd.AddCommand(enableCmd)
 }
 
@@ -21,26 +22,33 @@ var enableCmd = &cobra.Command{
 }
 
 func runEnable(cmd *cobra.Command, args []string) {
-	// Setting .git/config : Gitleaks.url
-	urlFlag, _ := cmd.Flags().GetString("url")
-	ucmp.SetGitleaksConfig(ucmp.ConfigUrl, urlFlag)
+	auditConfig := ucmp.GetAuditConfigInstance()
 
-	debugFlag, _ := cmd.Flags().GetBool("debug")
-	if debugFlag {
-		// If enable command with --debug flag, set Gitleaks.debug to true
-		// Using this flag, print the all commands logs
-		ucmp.SetGitleaksConfig(ucmp.ConfigDebug, strconv.FormatBool(debugFlag))
+	// 1. Enable Global Git Hooks (pre-commit, post-commit)
+	err := auditConfig.SetGlobalHooksPath()
+	if err != nil {
+		log.Fatal().Err(err).Msg("unable to set global hooks path")
+		os.Exit(-1)
+	}
+
+	// 2. Setting Url and other flags (debug, enable)
+	url, _ := cmd.Flags().GetString(string(ucmp.AUDIT_CONFIG_KEY_URL))
+	auditConfig.SetAuditConfig(ucmp.GIT_SCOPE_GLOBAL, ucmp.AUDIT_CONFIG_KEY_URL, url) // Check Global Git Config
+
+	debug, _ := cmd.Flags().GetBool("debug")
+	if debug {
+		// If enable command with --debug flag, print the all commands logs
+		auditConfig.SetAuditConfig(ucmp.GIT_SCOPE_LOCAL, ucmp.AUDIT_CONFIG_KEY_DEBUG, debug) // Check Local Git Config
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
 
-	// Setting .git/config : Gitleaks.enable
-	ucmp.SetGitleaksConfig(ucmp.ConfigEnable, "true")
+	auditConfig.SetAuditConfig(ucmp.GIT_SCOPE_GLOBAL, ucmp.AUDIT_CONFIG_KEY_ENABLE, true) // Check Global Git Config
 
-	// Setting .git/hooks/pre-commit
-	ucmp.EnableGitHooks(ucmp.PreCommitScriptPath, ucmp.PreCommitScript)
+	// Insert Script Content in $HOME/.githooks pre-commit, post-commit
 
-	// Setting .git/hooks/post-commit
-	ucmp.EnableGitHooks(ucmp.PostCommitScriptPath, ucmp.PostCommitScript)
+	// 3. Install Global Git Hooks (pre-commit, post-commit)
+	ucmp.InstallGitHookScript(ucmp.PreCommitScriptPath, ucmp.PreCommitScript)
+	ucmp.InstallGitHookScript(ucmp.PostCommitScriptPath, ucmp.PostCommitScript)
 
 	log.Debug().Msg("Gitleaks Enabled")
 }

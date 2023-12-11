@@ -46,75 +46,60 @@ const (
 )
 
 func runAudit(cmd *cobra.Command, args []string) {
-	// 로직상 오류가 발생해도 정상 리턴
+	// If Error occurs not throwing exceptions.
 	defer func() {
 		recover()
 		return
 	}()
 
-	log.Debug().Msg(fmt.Sprintf("UserAgent, %s", ucmp.Auth.UserAgent))
-	log.Debug().Msg(fmt.Sprintf("checksum, %s", ucmp.Auth.BinaryCheckSum))
-	log.Debug().Msg(fmt.Sprintf("email, %s", ucmp.Auth.Email))
+	auditConfig := ucmp.GetAuditConfigInstance()
 
-	// 디버깅 옵션 활성시 로그 표시
-	debugging := ucmp.GetGitleaksConfigBoolean(ucmp.ConfigDebug)
-	if debugging {
+	if auditConfig.GetAuditConfigBoolean(ucmp.AUDIT_CONFIG_KEY_DEBUG) {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
 
-	// Check .git/config - Gitleaks.Enable
-	isEnable := ucmp.GetGitleaksConfigBoolean(ucmp.ConfigEnable)
-	if !isEnable {
-		if debugging {
-			log.Error().Msg("Gitleaks is not enabled")
+	if !auditConfig.GetAuditConfigBoolean(ucmp.AUDIT_CONFIG_KEY_ENABLE) {
+		if auditConfig.GetAuditConfigBoolean(ucmp.AUDIT_CONFIG_KEY_DEBUG) {
+			log.Error().Msg("Audit is not enabled")
 		}
-		return
+		return // Exit the program, if 'enable' is false
 	}
 
-	// Check .git/config - Gitleaks.Scanned
-	isScanned := ucmp.GetGitleaksConfigBoolean(ucmp.ConfigScanned)
-	if !isScanned {
-		if debugging {
+	if !auditConfig.GetAuditConfigBoolean(ucmp.AUDIT_CONFIG_KEY_SCANNED) {
+		if auditConfig.GetAuditConfigBoolean(ucmp.AUDIT_CONFIG_KEY_DEBUG) {
 			log.Error().Msg("Staged files are not scanned")
 		}
-		// Pre-commmit (gitleaks protect) 단계에서 종료시
-		// 1. Secret 발견
-		// 2. Pre-commit (gitleaks protect) 미 수행
+		return // Exit the program, if 'scanned' is false (Check file: protect.go)
+	}
+
+	// Unset 'scanned' for next scan check.
+	auditConfig.UnsetAuditConfig(ucmp.GIT_SCOPE_LOCAL, ucmp.AUDIT_CONFIG_KEY_SCANNED)
+
+	authInstance := ucmp.GetAuthenticationInstance()
+	if !authInstance.CheckValidEmail() {
+		log.Error().Msg(fmt.Sprintf("Email is not one of valid domains: %s", authInstance.GetValidDomainList()))
+		// Error message is "Email is not one of valid domains: lguplus.co.kr, lguplus.partners.co.kr"
 		return
 	}
 
-	_, err := ucmp.DeleteGitleaksConfig(ucmp.ConfigScanned)
-	if err != nil {
-		// don't exit on error
-		log.Error().Err(err).Msg("")
-	}
+	log.Debug().Str("Url", auditConfig.GetAuditConfigString(ucmp.AUDIT_CONFIG_KEY_URL)).Msg("Request")
 
-	// Check Email is lguplus.co.kr or lgupluspartners.co.kr
-	if !ucmp.Auth.CheckValidEmail() {
-		log.Error().Msg("Email is not lguplus.co.kr or lgupluspartners.co.kr")
-		return
-	}
-
-	backendUrl, _ := ucmp.GetGitleaksConfig(ucmp.ConfigUrl)
-
-	log.Debug().Str("Url", backendUrl).Msg("Request")
-
-	u, err := url.Parse(backendUrl)
+	u, err := url.Parse(auditConfig.GetAuditConfigString(ucmp.AUDIT_CONFIG_KEY_URL))
 	// net/url Parsing Error
 	if err != nil {
-		if debugging {
+		if auditConfig.GetAuditConfigBoolean(ucmp.AUDIT_CONFIG_KEY_DEBUG) {
 			log.Error().Msg("Error Parsing URL ," + err.Error())
 		}
 		panic(err)
 	}
 
 	// Request Handling
-	requestData, _ := json.Marshal(retrieveLocalGitInfo())
+	requestData, _ := json.Marshal(auditConfig.RetrieveRepositoryInfo())
 
 	req, _ := http.NewRequest("POST", u.String(), bytes.NewBuffer(requestData))
 	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
-	req.Header.Set("User-Agent", ucmp.Auth.UserAgent+"/"+Version)
-	req.SetBasicAuth(Version, ucmp.Auth.BinaryCheckSum)
+	req.Header.Set("User-Agent", authInstance.UserAgent+"/"+Version)
+	req.SetBasicAuth(Version, authInstance.BinaryCheckSum)
 
 	log.Debug().RawJSON("Body", requestData).Msg("Request")
 
@@ -122,13 +107,22 @@ func runAudit(cmd *cobra.Command, args []string) {
 	resp, err := client.Do(req)
 	// net/http client Error - Request 오류 시 백엔드 통신 X
 	if err != nil {
-		if debugging {
+		if auditConfig.GetAuditConfigBoolean(ucmp.AUDIT_CONFIG_KEY_DEBUG) {
 			log.Error().Msg("Http Request Error, " + err.Error())
 		}
 		panic(err)
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != 200 {
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			log.Error().Msg("Error while reading response body")
+			return
+		}
+		log.Error().Msg(fmt.Sprintf("Error from server [%s] %s", resp.Status, string(bodyBytes)))
+		panic(resp.Status)
+	}
 	// Response Handling
 	response, _ := io.ReadAll(resp.Body)
 
@@ -136,7 +130,7 @@ func runAudit(cmd *cobra.Command, args []string) {
 	var responseData AuditResponse
 	log.Debug().RawJSON("Body", response).Msg("Response")
 	if err := json.Unmarshal([]byte(response), &responseData); err != nil {
-		if debugging {
+		if auditConfig.GetAuditConfigBoolean(ucmp.AUDIT_CONFIG_KEY_DEBUG) {
 			log.Error().Msg("Json Unmarshal Error, " + err.Error())
 		}
 		panic(err)
@@ -149,12 +143,10 @@ func runAudit(cmd *cobra.Command, args []string) {
 		log.Fatal().Err(err).Msg("")
 	}
 
-	// GitConfig 필드 처리
-	// TODO: enable false 로 응답 받은 경우 post-commit 삭제 필요.
 	if gitConfig, isGitConfigRespond := data[responseStringGitConfig].(map[string]interface{}); isGitConfigRespond {
 		log.Debug().Interface("Body.Data."+responseStringGitConfig, gitConfig).Msg("Response")
 		for k, v := range gitConfig {
-			ucmp.SetGitleaksConfig(k, fmt.Sprintf("%v", v))
+			auditConfig.SetAuditConfigUnsafe(k, fmt.Sprintf("%v", v))
 		}
 	}
 
@@ -168,25 +160,5 @@ func runAudit(cmd *cobra.Command, args []string) {
 			log.Debug().Interface("Body.Data."+responseStringMessage, message).Msg("Response")
 			log.Info().Msgf("%s", message)
 		}
-	}
-}
-
-func retrieveLocalGitInfo() AuditRequest {
-	OrganizationName, _ := ucmp.GetLocalOrganizationName()
-	RepositoryName, _ := ucmp.GetLocalRepositoryName()
-	BranchName, _ := ucmp.GetHeadBranchName()
-	AuthorName, _ := ucmp.GetUserName()
-	AuthorEmail, _ := ucmp.GetUserEmail()
-	CommitHash, _ := ucmp.GetHeadCommitHash()
-	CommitTimestamp, _ := ucmp.GetHeadCommitTimestamp()
-
-	return AuditRequest{
-		OrganizationName,
-		RepositoryName,
-		BranchName,
-		AuthorName,
-		AuthorEmail,
-		CommitHash,
-		CommitTimestamp,
 	}
 }

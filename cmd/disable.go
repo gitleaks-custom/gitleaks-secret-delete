@@ -18,28 +18,24 @@ var disableCmd = &cobra.Command{
 }
 
 func runDisable(cmd *cobra.Command, args []string) {
-	if ucmp.GetGitleaksConfigBoolean(ucmp.ConfigDebug) {
+	auditConfig := ucmp.GetAuditConfigInstance()
+
+	if auditConfig.Local[ucmp.AUDIT_CONFIG_KEY_DEBUG].(bool) {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
 
-	// Remove Gitleaks.enable in .git/config
-	ucmp.DeleteGitleaksConfig(ucmp.ConfigEnable)
+	// 1. Disable Global Git Hooks (pre-commit, post-commit)
+	_ = auditConfig.UnsetGlobalHooksPath()
 
-	// Remove Gitleaks.url in .git/config
-	// Custom.SetGitleaksConfig("url", "")
-	ucmp.DeleteGitleaksConfig(ucmp.ConfigUrl)
+	// 2. Unsetting Url and other flags (debug, enable)
+	auditConfig.UnsetAuditConfig(ucmp.GIT_SCOPE_GLOBAL, ucmp.AUDIT_CONFIG_KEY_URL)
+	auditConfig.UnsetAuditConfig(ucmp.GIT_SCOPE_GLOBAL, ucmp.AUDIT_CONFIG_KEY_ENABLE)
+	auditConfig.UnsetAuditConfig(ucmp.GIT_SCOPE_LOCAL, ucmp.AUDIT_CONFIG_KEY_DEBUG)
+	auditConfig.UnsetAuditConfig(ucmp.GIT_SCOPE_LOCAL, ucmp.AUDIT_CONFIG_KEY_SCANNED)
 
-	// Remove Gitleaks.debug in .git/config
-	ucmp.DeleteGitleaksConfig(ucmp.ConfigDebug)
-
-	// Remove Gitleaks.scanned in .git/config
-	ucmp.DeleteGitleaksConfig(ucmp.ConfigScanned)
-
-	// Remove Script in .git/hooks/pre-commit
-	ucmp.DisableGitHooks(ucmp.PreCommitScriptPath, ucmp.PreCommitScript)
-
-	// Remove Script in .git/hooks/post-commit
-	ucmp.DisableGitHooks(ucmp.PostCommitScriptPath, ucmp.PostCommitScript)
+	// 3. Uninstall Global Git Hooks (pre-commit, post-commit)
+	ucmp.UninstallGitHookScript(ucmp.PreCommitScriptPath, ucmp.PreCommitScript)
+	ucmp.UninstallGitHookScript(ucmp.PostCommitScriptPath, ucmp.PostCommitScript)
 
 	log.Debug().Msg("Gitleaks Disabled")
 }
