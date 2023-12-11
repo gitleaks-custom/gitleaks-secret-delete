@@ -5,59 +5,74 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 )
 
 const (
 	userAgentPrefix = "Gitleaks"
 )
 
-func init() {
-	Auth.Init()
-}
+var callOnceAuthInstance sync.Once // Support Singleton
+var validDomainList = []string{"lguplus.co.kr", "lgupluspartners.co.kr"}
 
-// Module Instance
-var Auth auth
-
-type auth struct {
+type Auth struct {
 	UserAgent      string
 	BinaryCheckSum string
 	Email          string
 }
 
-func (auth *auth) Init() {
-	auth.UserAgent = userAgentPrefix
-	auth.BinaryCheckSum, _ = getChecksum()
-	auth.Email, _ = GetUserEmail()
+var authenticationInstance *Auth
+
+func GetAuthenticationInstance() *Auth {
+	if authenticationInstance == nil { // Singleton instance
+		callOnceAuthInstance.Do(func() {
+			authenticationInstance = &Auth{
+				UserAgent:      userAgentPrefix,
+				BinaryCheckSum: getChecksum(),
+				Email:          getUserEmail(),
+			}
+		})
+	}
+
+	return authenticationInstance
 }
 
-func (auth *auth) CheckValidEmail() bool {
+func (auth *Auth) CheckValidEmail() bool {
 	if auth.Email == "" {
 		return false
 	}
 
-	// 이메일 주소에서 도메인 부분 추출
 	parts := strings.Split(auth.Email, "@")
 	if len(parts) != 2 {
 		return false // 올바르지 않은 이메일 형식
 	}
 	domain := parts[1]
 
-	// 도메인이 lguplus.co.kr 또는 lgupluspartners.co.kr 인지 확인
-	return domain == "lguplus.co.kr" || domain == "lgupluspartners.co.kr"
+	for _, validDomain := range validDomainList {
+		if domain == validDomain {
+			return true
+		}
+	}
+
+	return false
 }
 
-func getChecksum() (string, error) {
-	exePath, err := os.Executable()
+func (auth *Auth) GetValidDomainList() string {
+	return strings.Join(validDomainList, ", ")
+}
+
+func getChecksum() string {
+	exePath, err := os.Executable() // Current executable binary path
 	if err != nil {
-		return "", err
+		return ""
 	}
 
 	data, err := os.ReadFile(exePath)
 	if err != nil {
-		return "", err
+		return ""
 	}
 
-	checksum := sha256.Sum256(data)
+	checksum := sha256.Sum256(data) // Get Checksum of the binary file
 
-	return fmt.Sprintf("%x", checksum[:]), nil
+	return fmt.Sprintf("%x", checksum[:]) // Convert [32]byte to string
 }

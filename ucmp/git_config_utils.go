@@ -11,107 +11,154 @@ import (
 	"syscall"
 )
 
+type GitScope int
+
 const (
-	ConfigDebug   = "debug"
-	ConfigEnable  = "enable"
-	ConfigScanned = "scanned"
-	ConfigUrl     = "url"
+	GIT_SCOPE_LOCAL  GitScope = iota
+	GIT_SCOPE_GLOBAL GitScope = iota
+	GIT_SCOPE_SYSTEM GitScope = iota
+	GIT_SCOPE_ENTIRE GitScope = iota
 )
 
-type ErrNotFound struct {
-	Key string
+const (
+	audit_config_prefix = "Gitleaks."
+)
+
+func getGitConfig(scope GitScope, key string) (string, error) {
+	switch scope {
+	case GIT_SCOPE_LOCAL:
+		return execGitCommand("config", "--get", "--null", "--local", key)
+	case GIT_SCOPE_GLOBAL:
+		return execGitCommand("config", "--get", "--null", "--global", key)
+	case GIT_SCOPE_SYSTEM:
+		return execGitCommand("config", "--get", "--null", "--system", key)
+	default:
+		return execGitCommand("config", "--get", "--null", key)
+	}
 }
 
-func (e *ErrNotFound) Error() string {
-	return fmt.Sprintf("the key `%s` is not found", e.Key)
-}
+func getAuditConfigString(scope GitScope, key AUDIT_CONFIG) (string, error) {
 
-func SetGitleaksConfig(key string, value string) (string, error) {
-	return execGitCommand("config", "--local", "Gitleaks."+key, value)
-}
+	searchKey := audit_config_prefix + key
 
-func GetGitleaksConfig(key string) (string, error) {
-	searchString := "Gitleaks." + key
-	return local(searchString)
-}
-
-func DeleteGitleaksConfig(key string) (string, error) {
-	searchString := "Gitleaks." + key
-	return execGitCommand("config", "--local", "--unset", searchString)
-}
-
-// Return true Only if [Gitleaks.Key = true] in .git/config
-func GetGitleaksConfigBoolean(key string) bool {
-	value, err := GetGitleaksConfig(key)
+	value, err := getGitConfig(scope, string(searchKey))
 	if err != nil {
-		return false
+		return "", err
+	}
+	return value, nil
+}
+
+func getAuditConfigBoolean(scope GitScope, key AUDIT_CONFIG) (bool, error) {
+
+	searchKey := audit_config_prefix + key
+
+	value, err := getGitConfig(scope, string(searchKey))
+	if err != nil {
+		return false, err
 	}
 
 	flag, err := strconv.ParseBool(value)
 	if err != nil {
-		return false
+		return false, err
 	}
 
-	return flag
+	return flag, nil
 }
 
-// Git Config 에서 Key 를 탐색
-func entire(key string) (string, error) {
-	return execGitCommand("config", "--get", "--null", key)
+func setAuditConfig(scope GitScope, key string, value string) (string, error) {
+
+	searchKey := audit_config_prefix + key
+
+	switch scope {
+	case GIT_SCOPE_LOCAL:
+		return execGitCommand("config", "--local", searchKey, value)
+	case GIT_SCOPE_GLOBAL:
+		return execGitCommand("config", "--global", searchKey, value)
+	case GIT_SCOPE_SYSTEM:
+		return execGitCommand("config", "--system", searchKey, value)
+	default:
+		return execGitCommand("config", "--local", searchKey, value)
+	}
 }
 
-// Global Git Config 에서 Key 를 탐색
-func global(key string) (string, error) {
-	return execGitCommand("config", "--get", "--null", "--global", key)
+func deleteAuditConfig(scope GitScope, key string) (string, error) {
+
+	searchKey := audit_config_prefix + key
+
+	switch scope {
+	case GIT_SCOPE_LOCAL:
+		return execGitCommand("config", "--local", "--unset", searchKey)
+	case GIT_SCOPE_GLOBAL:
+		return execGitCommand("config", "--global", "--unset", searchKey)
+	case GIT_SCOPE_SYSTEM:
+		return execGitCommand("config", "--system", "--unset", searchKey)
+	default:
+		return execGitCommand("config", "--local", "--unset", searchKey)
+	}
 }
 
-// Local Git Config 에서 Key 를 탐색
-func local(key string) (string, error) {
-	return execGitCommand("config", "--get", "--null", "--local", key)
+func getUserName() string {
+	userName, err := getGitConfig(GIT_SCOPE_ENTIRE, "user.name")
+	if err != nil {
+		return ""
+	}
+	return userName
 }
 
-func GetUserName() (string, error) {
-	return entire("user.name")
+func getUserEmail() string {
+	userEmail, err := getGitConfig(GIT_SCOPE_ENTIRE, "user.email")
+	if err != nil {
+		return ""
+	}
+	return userEmail
 }
 
-func GetUserEmail() (string, error) {
-	return entire("user.email")
+func getHeadCommitHash() string {
+	commitHash, err := execGitCommand("rev-parse", "HEAD")
+	if err != nil {
+		return ""
+	}
+	return commitHash
 }
 
-func GetHeadCommitHash() (string, error) {
-	return execGitCommand("rev-parse", "HEAD")
+func getHeadCommitTimestamp() string {
+	commitTimestamp, err := execGitCommand("show", "-s", "--format=%ct")
+	if err != nil {
+		return ""
+	}
+	return commitTimestamp
 }
 
-func GetHeadCommitTimestamp() (string, error) {
-	return execGitCommand("show", "-s", "--format=%ct")
-}
-
-func GetHeadBranchName() (string, error) {
-	return execGitCommand("rev-parse", "--abbrev-ref", "HEAD")
+func getHeadBranchName() string {
+	branchName, err := execGitCommand("rev-parse", "--abbrev-ref", "HEAD")
+	if err != nil {
+		return ""
+	}
+	return branchName
 }
 
 func getLocalRemoteOriginUrl() (string, error) {
-	return local("remote.origin.url")
+	return getGitConfig(GIT_SCOPE_LOCAL, "remote.origin.url")
 }
 
-func GetLocalRepositoryName() (string, error) {
+func getLocalRepositoryName() string {
 	url, err := getLocalRemoteOriginUrl()
 	if err != nil {
-		return "", err
+		return ""
 	}
 
 	repo := retrieveRepoName(url)
-	return repo, nil
+	return repo
 }
 
-func GetLocalOrganizationName() (string, error) {
+func getLocalOrganizationName() string {
 	url, err := getLocalRemoteOriginUrl()
 	if err != nil {
-		return "", err
+		return ""
 	}
 
 	orga := retrieveOrgaName(url)
-	return orga, nil
+	return orga
 }
 
 var repoNameRegexp = regexp.MustCompile(`.+/([^/]+)(\.git)?$`)
@@ -129,6 +176,14 @@ func retrieveOrgaName(url string) string {
 		return orgName
 	}
 	return ""
+}
+
+type ErrNotFound struct {
+	Key string
+}
+
+func (e *ErrNotFound) Error() string {
+	return fmt.Sprintf("the key `%s` is not found", e.Key)
 }
 
 func execGitCommand(args ...string) (string, error) {
