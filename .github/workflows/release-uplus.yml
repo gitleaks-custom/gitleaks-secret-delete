@@ -2,8 +2,6 @@ name: Gitleaks Release
 run-name: Gitleaks Release Run
 on:
   push:
-    branches:
-      - 'master-uplus'
     tags:
       - 'v*.*.*-uplus.*'
 
