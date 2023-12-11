@@ -39,6 +39,7 @@ type AuditResponse struct {
 	Data   interface{} `json:"data"`
 }
 
+// Response Schema between Backend and Gitleaks cli
 const (
 	responseStringGitConfig = "GitConfig"
 	responseStringVersion   = "Version"
@@ -46,7 +47,7 @@ const (
 )
 
 func runAudit(cmd *cobra.Command, args []string) {
-	// If Error occurs not throwing exceptions.
+	// Not throwing exceptions when error occurs
 	defer func() {
 		recover()
 		return
@@ -78,14 +79,14 @@ func runAudit(cmd *cobra.Command, args []string) {
 	authInstance := ucmp.GetAuthenticationInstance()
 	if !authInstance.CheckValidEmail() {
 		log.Error().Msg(fmt.Sprintf("Email is not one of valid domains: %s", authInstance.GetValidDomainList()))
-		// Error message is "Email is not one of valid domains: lguplus.co.kr, lguplus.partners.co.kr"
+		// Error message is "Email is not one of valid domains: lguplus.co.kr, lguplus.partners.co.kr" (See ucmp/authenticate.go )
 		return
 	}
 
 	log.Debug().Str("Url", auditConfig.GetAuditConfigString(ucmp.AUDIT_CONFIG_KEY_URL)).Msg("Request")
 
+	// Check Git Global config 'Gitleaks.url'
 	u, err := url.Parse(auditConfig.GetAuditConfigString(ucmp.AUDIT_CONFIG_KEY_URL))
-	// net/url Parsing Error
 	if err != nil {
 		if auditConfig.GetAuditConfigBoolean(ucmp.AUDIT_CONFIG_KEY_DEBUG) {
 			log.Error().Msg("Error Parsing URL ," + err.Error())
@@ -105,7 +106,7 @@ func runAudit(cmd *cobra.Command, args []string) {
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
-	// net/http client Error - Request 오류 시 백엔드 통신 X
+	// Request Error
 	if err != nil {
 		if auditConfig.GetAuditConfigBoolean(ucmp.AUDIT_CONFIG_KEY_DEBUG) {
 			log.Error().Msg("Http Request Error, " + err.Error())
@@ -125,10 +126,10 @@ func runAudit(cmd *cobra.Command, args []string) {
 	}
 	// Response Handling
 	response, _ := io.ReadAll(resp.Body)
-
-	// Response Handling
-	var responseData AuditResponse
 	log.Debug().RawJSON("Body", response).Msg("Response")
+
+	// Type casting JSON to struct
+	var responseData AuditResponse
 	if err := json.Unmarshal([]byte(response), &responseData); err != nil {
 		if auditConfig.GetAuditConfigBoolean(ucmp.AUDIT_CONFIG_KEY_DEBUG) {
 			log.Error().Msg("Json Unmarshal Error, " + err.Error())
@@ -136,13 +137,14 @@ func runAudit(cmd *cobra.Command, args []string) {
 		panic(err)
 	}
 
+	// Type casting struct to map
 	data, ok := responseData.Data.(map[string]interface{})
 	if !ok {
-		// Data 필드가 map[string]interface{} 타입이 아님.
-		// 서버 Response 오류
+		// Response Data type Error: Response.Data field is not map type.
 		log.Fatal().Err(err).Msg("")
 	}
 
+	// Handling Response Data - responseStringGitConfig = "GitConfig"
 	if gitConfig, isGitConfigRespond := data[responseStringGitConfig].(map[string]interface{}); isGitConfigRespond {
 		log.Debug().Interface("Body.Data."+responseStringGitConfig, gitConfig).Msg("Response")
 		for k, v := range gitConfig {
@@ -150,10 +152,13 @@ func runAudit(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	// Version, Message 필드 처리
+	// Handling Response Data - responseStringVersion = "Version"
 	version, isVersionRespond := data[responseStringVersion]
+
+	// Handling Response Data - responseStringMessage = "Message"
 	message, isMessageRespond := data[responseStringMessage]
 
+	// Version Check & Print message
 	if isVersionRespond && (version != Version) {
 		log.Debug().Interface("Body.Data."+responseStringVersion, version).Msg("Response")
 		if isMessageRespond {
