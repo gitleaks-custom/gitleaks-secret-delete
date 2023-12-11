@@ -47,6 +47,7 @@ func runEnable(cmd *cobra.Command, args []string) {
 	// Insert Script Content in $HOME/.githooks pre-commit, post-commit
 
 	// 3. Install Global Git Hooks (pre-commit, post-commit)
+	ucmp.InstallGitHookScript(ucmp.PreCommitScriptPath, ucmp.LocalPreCommitSupportScript)
 	ucmp.InstallGitHookScript(ucmp.PreCommitScriptPath, ucmp.PreCommitScript)
 	ucmp.InstallGitHookScript(ucmp.PostCommitScriptPath, ucmp.PostCommitScript)
 

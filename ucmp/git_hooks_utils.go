@@ -10,11 +10,23 @@ import (
 
 const (
 	// CoreHooksPath is In User Home Directory
-	CoreHooksPath        = ".githooks"
-	PreCommitScriptPath  = CoreHooksPath + "/pre-commit"
-	PostCommitScriptPath = CoreHooksPath + "/post-commit"
-	PreCommitScript      = "gitleaks protect --no-banner --verbose --staged"
-	PostCommitScript     = "gitleaks audit"
+	CoreHooksPath               = ".githooks"
+	PreCommitScriptPath         = CoreHooksPath + "/pre-commit"
+	PostCommitScriptPath        = CoreHooksPath + "/post-commit"
+	PreCommitScript             = "gitleaks protect --no-banner --verbose --staged"
+	PostCommitScript            = "gitleaks audit"
+	LocalPreCommitSupportScript = `
+LOCAL_PRE_COMMIT_HOOK=".git/hooks/pre-commit"
+
+if [ -x "$LOCAL_PRE_COMMIT_HOOK" ]; then
+    "$LOCAL_PRE_COMMIT_HOOK"
+    RESULT=$?
+
+    if [ $RESULT -ne 0 ]; then
+        exit 1
+    fi
+fi
+`
 )
 
 func ensureHooksPath() {

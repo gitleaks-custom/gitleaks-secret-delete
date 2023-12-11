@@ -20,7 +20,7 @@ var disableCmd = &cobra.Command{
 func runDisable(cmd *cobra.Command, args []string) {
 	auditConfig := ucmp.GetAuditConfigInstance()
 
-	if auditConfig.Local[ucmp.AUDIT_CONFIG_KEY_DEBUG].(bool) {
+	if auditConfig.GetAuditConfigBoolean(ucmp.AUDIT_CONFIG_KEY_DEBUG) {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
 
@@ -35,6 +35,7 @@ func runDisable(cmd *cobra.Command, args []string) {
 
 	// 3. Uninstall Global Git Hooks (pre-commit, post-commit)
 	ucmp.UninstallGitHookScript(ucmp.PreCommitScriptPath, ucmp.PreCommitScript)
+	ucmp.UninstallGitHookScript(ucmp.PreCommitScriptPath, ucmp.LocalPreCommitSupportScript)
 	ucmp.UninstallGitHookScript(ucmp.PostCommitScriptPath, ucmp.PostCommitScript)
 
 	log.Debug().Msg("Gitleaks Disabled")
