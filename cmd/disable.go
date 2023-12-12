@@ -38,5 +38,5 @@ func runDisable(cmd *cobra.Command, args []string) {
 	ucmp.UninstallGitHookScript(ucmp.PreCommitScriptPath, ucmp.LocalPreCommitSupportScript)
 	ucmp.UninstallGitHookScript(ucmp.PostCommitScriptPath, ucmp.PostCommitScript)
 
-	log.Debug().Msg("Gitleaks Disabled")
+	log.Info().Msg("Gitleaks Disabled")
 }

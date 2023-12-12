@@ -51,5 +51,5 @@ func runEnable(cmd *cobra.Command, args []string) {
 	ucmp.InstallGitHookScript(ucmp.PreCommitScriptPath, ucmp.PreCommitScript)
 	ucmp.InstallGitHookScript(ucmp.PostCommitScriptPath, ucmp.PostCommitScript)
 
-	log.Debug().Msg("Gitleaks Enabled")
+	log.Info().Msg("Gitleaks Enabled")
 }
