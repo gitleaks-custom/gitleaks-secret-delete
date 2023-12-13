@@ -78,8 +78,10 @@ func runAudit(cmd *cobra.Command, args []string) {
 
 	authInstance := ucmp.GetAuthenticationInstance()
 	if !authInstance.CheckValidEmail() {
-		log.Error().Msg(fmt.Sprintf("Email is not one of valid domains: %s", authInstance.GetValidDomainList()))
-		// Error message is "Email is not one of valid domains: lguplus.co.kr, lguplus.partners.co.kr" (See ucmp/authenticate.go )
+		if auditConfig.GetAuditConfigBoolean(ucmp.AUDIT_CONFIG_KEY_DEBUG) {
+			// "Email is not one of valid domains: lguplus.co.kr, lguplus.partners.co.kr" (See ucmp/authenticate.go )
+			log.Error().Msg(fmt.Sprintf("Email is not one of valid domains: %s", authInstance.GetValidDomainList()))
+		}
 		return
 	}
 
