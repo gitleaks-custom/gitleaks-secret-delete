@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 func init() {
@@ -41,9 +42,10 @@ type AuditResponse struct {
 
 // Response Schema between Backend and Gitleaks cli
 const (
-	responseStringGitConfig = "GitConfig"
-	responseStringVersion   = "Version"
-	responseStringMessage   = "Message"
+	responseStringGitConfig       = "GitConfig"
+	responseStringVersion         = "Version"
+	responseStringMessage         = "Message"
+	DefaultTimeout          int64 = 3
 )
 
 func runAudit(cmd *cobra.Command, args []string) {
@@ -87,8 +89,8 @@ func runAudit(cmd *cobra.Command, args []string) {
 
 	log.Debug().Str("Url", auditConfig.GetAuditConfigString(ucmp.AUDIT_CONFIG_KEY_URL)).Msg("Request")
 
-	// Check Git Global config 'Gitleaks.url'
-	u, err := url.Parse(auditConfig.GetAuditConfigString(ucmp.AUDIT_CONFIG_KEY_URL))
+	// Request Handling
+	requestUrl, err := url.Parse(auditConfig.GetAuditConfigString(ucmp.AUDIT_CONFIG_KEY_URL)) // (See Global Config 'Gitleaks.url')
 	if err != nil {
 		if auditConfig.GetAuditConfigBoolean(ucmp.AUDIT_CONFIG_KEY_DEBUG) {
 			log.Error().Msg("Error Parsing URL ," + err.Error())
@@ -96,19 +98,21 @@ func runAudit(cmd *cobra.Command, args []string) {
 		panic(err)
 	}
 
-	// Request Handling
 	requestData, _ := json.Marshal(auditConfig.RetrieveRepositoryInfo())
 
-	req, _ := http.NewRequest("POST", u.String(), bytes.NewBuffer(requestData))
+	req, _ := http.NewRequest("POST", requestUrl.String(), bytes.NewBuffer(requestData))
 	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
 	req.Header.Set("User-Agent", authInstance.UserAgent+"/"+Version)
 	req.SetBasicAuth(Version, authInstance.BinaryCheckSum)
 
 	log.Debug().RawJSON("Body", requestData).Msg("Request")
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: time.Duration(DefaultTimeout) * time.Second, // Default Timeout : 3 seconds
+	}
 	resp, err := client.Do(req)
-	// Request Error
+
+	// Request Error Handling
 	if err != nil {
 		if auditConfig.GetAuditConfigBoolean(ucmp.AUDIT_CONFIG_KEY_DEBUG) {
 			log.Error().Msg("Http Request Error, " + err.Error())
