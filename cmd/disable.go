@@ -30,6 +30,7 @@ func runDisable(cmd *cobra.Command, args []string) {
 	// 2. Unsetting Url and other flags (debug, enable)
 	auditConfig.UnsetAuditConfig(ucmp.GIT_SCOPE_GLOBAL, ucmp.AUDIT_CONFIG_KEY_URL)
 	auditConfig.UnsetAuditConfig(ucmp.GIT_SCOPE_GLOBAL, ucmp.AUDIT_CONFIG_KEY_ENABLE)
+	auditConfig.UnsetAuditConfig(ucmp.GIT_SCOPE_GLOBAL, ucmp.AUDIT_CONFIG_KEY_TIMEOUT)
 	auditConfig.UnsetAuditConfig(ucmp.GIT_SCOPE_LOCAL, ucmp.AUDIT_CONFIG_KEY_DEBUG)
 	auditConfig.UnsetAuditConfig(ucmp.GIT_SCOPE_LOCAL, ucmp.AUDIT_CONFIG_KEY_SCANNED)
 

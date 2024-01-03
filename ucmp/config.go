@@ -14,16 +14,6 @@ import (
 
 type AUDIT_CONFIG string
 
-const (
-	// Global Scope
-	AUDIT_CONFIG_KEY_URL    AUDIT_CONFIG = "url"    // string
-	AUDIT_CONFIG_KEY_ENABLE AUDIT_CONFIG = "enable" // boolean
-
-	// Local Scope
-	AUDIT_CONFIG_KEY_DEBUG   AUDIT_CONFIG = "debug"   // boolean
-	AUDIT_CONFIG_KEY_SCANNED AUDIT_CONFIG = "scanned" // boolean
-)
-
 var callOnceAuditInstance sync.Once // Support Singleton
 
 type AuditConfig struct {
@@ -47,6 +37,17 @@ func GetAuditConfigInstance() *AuditConfig {
 	return auditConfigInstance
 }
 
+const (
+	// Global Scope
+	AUDIT_CONFIG_KEY_URL     AUDIT_CONFIG = "url"     // string
+	AUDIT_CONFIG_KEY_ENABLE  AUDIT_CONFIG = "enable"  // boolean
+	AUDIT_CONFIG_KEY_TIMEOUT AUDIT_CONFIG = "timeout" // int64
+
+	// Local Scope
+	AUDIT_CONFIG_KEY_DEBUG   AUDIT_CONFIG = "debug"   // boolean
+	AUDIT_CONFIG_KEY_SCANNED AUDIT_CONFIG = "scanned" // boolean
+)
+
 func (c *AuditConfig) init() {
 	if value, err := getAuditConfigString(GIT_SCOPE_GLOBAL, AUDIT_CONFIG_KEY_URL); err == nil {
 		c.Global[AUDIT_CONFIG_KEY_URL] = value
@@ -55,6 +56,10 @@ func (c *AuditConfig) init() {
 	// Global Scope Enable flags *
 	if value, err := getAuditConfigBoolean(GIT_SCOPE_GLOBAL, AUDIT_CONFIG_KEY_ENABLE); err == nil {
 		c.Global[AUDIT_CONFIG_KEY_ENABLE] = value
+	}
+
+	if value, err := getAuditConfigInt64(GIT_SCOPE_GLOBAL, AUDIT_CONFIG_KEY_TIMEOUT); err == nil {
+		c.Global[AUDIT_CONFIG_KEY_TIMEOUT] = value
 	}
 
 	// Local Scope Enable flags * - Need per-repository controls
@@ -80,6 +85,11 @@ func (c *AuditConfig) SetAuditConfig(scope GitScope, key AUDIT_CONFIG, value int
 		}
 	case bool:
 		_, err := setAuditConfig(scope, string(key), strconv.FormatBool(v)) // Type casting boolean to string
+		if err != nil {
+			return
+		}
+	case int64:
+		_, err := setAuditConfig(scope, string(key), strconv.FormatInt(v, 10)) // Type casting int64 to string
 		if err != nil {
 			return
 		}
@@ -150,6 +160,22 @@ func (c *AuditConfig) GetAuditConfigBoolean(key AUDIT_CONFIG) bool {
 	}
 
 	return false
+}
+
+func (c *AuditConfig) GetAuditConfigInt64(key AUDIT_CONFIG) int64 {
+	if value, ok := c.Local[key]; ok {
+		if intValue, ok := value.(int64); ok {
+			return intValue
+		}
+	}
+
+	if value, ok := c.Global[key]; ok {
+		if intValue, ok := value.(int64); ok {
+			return intValue
+		}
+	}
+
+	return 0
 }
 
 func (c *AuditConfig) SetGlobalHooksPath() error {

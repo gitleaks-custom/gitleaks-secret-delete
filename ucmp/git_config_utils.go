@@ -65,6 +65,23 @@ func getAuditConfigBoolean(scope GitScope, key AUDIT_CONFIG) (bool, error) {
 	return flag, nil
 }
 
+func getAuditConfigInt64(scope GitScope, key AUDIT_CONFIG) (int64, error) {
+
+	searchKey := audit_config_prefix + key
+
+	value, err := getGitConfig(scope, string(searchKey))
+	if err != nil {
+		return 0, err
+	}
+
+	intValue, err := strconv.ParseInt(value, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	return intValue, nil
+}
+
 func setAuditConfig(scope GitScope, key string, value string) (string, error) {
 
 	searchKey := audit_config_prefix + key

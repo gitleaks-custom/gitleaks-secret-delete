@@ -11,6 +11,7 @@ import (
 func init() {
 	enableCmd.Flags().String(string(ucmp.AUDIT_CONFIG_KEY_URL), "", "Audit Backend Url (Default : https://audit.ucmp.uplus.co.kr/gitleaks/)")
 	enableCmd.Flags().Bool(string(ucmp.AUDIT_CONFIG_KEY_DEBUG), false, "Enable debug output")
+	enableCmd.Flags().Int64(string(ucmp.AUDIT_CONFIG_KEY_TIMEOUT), 3, "Audit Backend Timeout (Default : 3 seconds)")
 	enableCmd.MarkFlagRequired(string(ucmp.AUDIT_CONFIG_KEY_URL))
 	rootCmd.AddCommand(enableCmd)
 }
@@ -40,6 +41,11 @@ func runEnable(cmd *cobra.Command, args []string) {
 		// If enable command with --debug flag, print the all commands logs
 		auditConfig.SetAuditConfig(ucmp.GIT_SCOPE_LOCAL, ucmp.AUDIT_CONFIG_KEY_DEBUG, debug) // Check Local Git Config
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	}
+
+	timeout, _ := cmd.Flags().GetInt64(string(ucmp.AUDIT_CONFIG_KEY_TIMEOUT))
+	if timeout > 0 {
+		auditConfig.SetAuditConfig(ucmp.GIT_SCOPE_GLOBAL, ucmp.AUDIT_CONFIG_KEY_TIMEOUT, timeout) // Check Global Git Config
 	}
 
 	auditConfig.SetAuditConfig(ucmp.GIT_SCOPE_GLOBAL, ucmp.AUDIT_CONFIG_KEY_ENABLE, true) // Check Global Git Config
