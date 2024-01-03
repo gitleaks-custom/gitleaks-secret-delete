@@ -42,10 +42,9 @@ type AuditResponse struct {
 
 // Response Schema between Backend and Gitleaks cli
 const (
-	responseStringGitConfig       = "GitConfig"
-	responseStringVersion         = "Version"
-	responseStringMessage         = "Message"
-	DefaultTimeout          int64 = 3
+	responseStringGitConfig = "GitConfig"
+	responseStringVersion   = "Version"
+	responseStringMessage   = "Message"
 )
 
 func runAudit(cmd *cobra.Command, args []string) {
@@ -107,8 +106,12 @@ func runAudit(cmd *cobra.Command, args []string) {
 
 	log.Debug().RawJSON("Body", requestData).Msg("Request")
 
+	var timeout int64
+	if timeout = auditConfig.GetAuditConfigInt64(ucmp.AUDIT_CONFIG_KEY_TIMEOUT); timeout == 0 {
+		timeout = 5
+	}
 	client := &http.Client{
-		Timeout: time.Duration(DefaultTimeout) * time.Second, // Default Timeout : 3 seconds
+		Timeout: time.Duration(timeout) * time.Second, // Default Timeout : 5 seconds
 	}
 	resp, err := client.Do(req)
 
