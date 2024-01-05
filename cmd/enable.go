@@ -11,7 +11,7 @@ import (
 func init() {
 	enableCmd.Flags().String(string(ucmp.AUDIT_CONFIG_KEY_URL), "", "Audit Backend Url (Default : https://audit.ucmp.uplus.co.kr/gitleaks/)")
 	enableCmd.Flags().Bool(string(ucmp.AUDIT_CONFIG_KEY_DEBUG), false, "Enable debug output")
-	enableCmd.Flags().Int64(string(ucmp.AUDIT_CONFIG_KEY_TIMEOUT), 3, "Audit Backend Timeout (Default : 3 seconds)")
+	enableCmd.Flags().Int64(string(ucmp.AUDIT_CONFIG_KEY_TIMEOUT), 0, "Audit Backend Timeout (Default : 5 Seconds")
 	enableCmd.MarkFlagRequired(string(ucmp.AUDIT_CONFIG_KEY_URL))
 	rootCmd.AddCommand(enableCmd)
 }
