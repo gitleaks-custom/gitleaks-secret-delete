@@ -54,6 +54,7 @@ func runAudit(cmd *cobra.Command, args []string) {
 		return
 	}()
 
+	// 1. 설정 값 Validation
 	auditConfig := ucmp.GetAuditConfigInstance()
 
 	if auditConfig.GetAuditConfigBoolean(ucmp.AUDIT_CONFIG_KEY_DEBUG) {
@@ -77,10 +78,11 @@ func runAudit(cmd *cobra.Command, args []string) {
 	// Unset 'scanned' for next scan check.
 	auditConfig.UnsetAuditConfig(ucmp.GIT_SCOPE_LOCAL, ucmp.AUDIT_CONFIG_KEY_SCANNED)
 
+	// 2. 사용자 이메일 Validation
 	authInstance := ucmp.GetAuthenticationInstance()
 	if !authInstance.CheckValidEmail() {
 		if auditConfig.GetAuditConfigBoolean(ucmp.AUDIT_CONFIG_KEY_DEBUG) {
-			// "Email is not one of valid domains: lguplus.co.kr, lguplus.partners.co.kr" (See ucmp/authenticate.go )
+			// "Email is not one of valid domains: lguplus.co.kr, lgupluspartners.co.kr" (See ucmp/authenticate.go )
 			log.Error().Msg(fmt.Sprintf("Email is not one of valid domains: %s", authInstance.GetValidDomainList()))
 		}
 		return
@@ -88,7 +90,7 @@ func runAudit(cmd *cobra.Command, args []string) {
 
 	log.Debug().Str("Url", auditConfig.GetAuditConfigString(ucmp.AUDIT_CONFIG_KEY_URL)).Msg("Request")
 
-	// Request Handling
+	// 3. 데이터 전송 준비
 	requestUrl, err := url.Parse(auditConfig.GetAuditConfigString(ucmp.AUDIT_CONFIG_KEY_URL)) // (See Global Config 'Gitleaks.url')
 	if err != nil {
 		if auditConfig.GetAuditConfigBoolean(ucmp.AUDIT_CONFIG_KEY_DEBUG) {
@@ -102,10 +104,11 @@ func runAudit(cmd *cobra.Command, args []string) {
 	req, _ := http.NewRequest("POST", requestUrl.String(), bytes.NewBuffer(requestData))
 	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
 	req.Header.Set("User-Agent", authInstance.UserAgent+"/"+Version)
-	req.SetBasicAuth(Version, authInstance.BinaryCheckSum)
+	req.SetBasicAuth(Version, authInstance.BinaryCheckSum) // => Backend Side header "authorization: Basic {base64 encoded version:checksum}"
 
 	log.Debug().RawJSON("Body", requestData).Msg("Request")
 
+	// 4. Gitleaks 백엔드에 데이터 전송
 	var timeout int64
 	if timeout = auditConfig.GetAuditConfigInt64(ucmp.AUDIT_CONFIG_KEY_TIMEOUT); timeout == 0 {
 		timeout = 5
@@ -115,7 +118,7 @@ func runAudit(cmd *cobra.Command, args []string) {
 	}
 	resp, err := client.Do(req)
 
-	// Request Error Handling
+	// 5. Response Handling
 	if err != nil {
 		if auditConfig.GetAuditConfigBoolean(ucmp.AUDIT_CONFIG_KEY_DEBUG) {
 			log.Error().Msg("Http Request Error, " + err.Error())
@@ -133,7 +136,7 @@ func runAudit(cmd *cobra.Command, args []string) {
 		log.Error().Msg(fmt.Sprintf("Error from server [%s] %s", resp.Status, string(bodyBytes)))
 		panic(resp.Status)
 	}
-	// Response Handling
+
 	response, _ := io.ReadAll(resp.Body)
 	log.Debug().RawJSON("Body", response).Msg("Response")
 
