@@ -13,7 +13,7 @@ const (
 )
 
 var callOnceAuthInstance sync.Once // Support Singleton
-var validDomainList = []string{"lguplus.co.kr", "lgupluspartners.co.kr"}
+var validDomainList = []string{"lguplus.co.kr", "lgupluspartners.co.kr", "users.noreply.github.com"}
 
 type Auth struct {
 	UserAgent      string
