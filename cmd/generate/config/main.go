@@ -24,6 +24,9 @@ func main() {
 	gitleaksConfigPath := os.Args[1]
 
 	configRules := []*config.Rule{
+		rules.UcmpAWSSecretKey(),
+		rules.UcmpGoogleOAuthCliendId(),
+		rules.UcmpGoogleOAuthClientSecret(),
 		rules.AdafruitAPIKey(),
 		rules.AdobeClientID(),
 		rules.AdobeClientSecret(),
@@ -95,7 +98,7 @@ func main() {
 		rules.GrafanaCloudApiToken(),
 		rules.GrafanaServiceAccountToken(),
 		rules.Hashicorp(),
-		rules.HashicorpField(),
+		// rules.HashicorpField(), // Remove due to many false positives
 		rules.Heroku(),
 		rules.HubSpot(),
 		rules.HuggingFaceAccessToken(),
