@@ -35,9 +35,11 @@ func runDisable(cmd *cobra.Command, args []string) {
 	auditConfig.UnsetAuditConfig(ucmp.GIT_SCOPE_LOCAL, ucmp.AUDIT_CONFIG_KEY_SCANNED)
 
 	// 3. Uninstall Global Git Hooks (pre-commit, post-commit)
-	ucmp.UninstallGitHookScript(ucmp.PreCommitScriptPath, ucmp.PreCommitScript)
-	ucmp.UninstallGitHookScript(ucmp.PreCommitScriptPath, ucmp.LocalPreCommitSupportScript)
-	ucmp.UninstallGitHookScript(ucmp.PostCommitScriptPath, ucmp.PostCommitScript)
+	// ucmp.UninstallGitHookScript(ucmp.PreCommitScriptPath, ucmp.PreCommitScript)
+	// ucmp.UninstallGitHookScript(ucmp.PreCommitScriptPath, ucmp.LocalPreCommitSupportScript)
+	// ucmp.UninstallGitHookScript(ucmp.PostCommitScriptPath, ucmp.PostCommitScript)
+	ucmp.RemoveGitHookScript(ucmp.PreCommitScriptPath)
+	ucmp.RemoveGitHookScript(ucmp.PostCommitScriptPath)
 
 	log.Info().Msg("Gitleaks Disabled")
 }

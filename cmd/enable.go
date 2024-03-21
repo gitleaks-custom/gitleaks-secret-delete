@@ -6,6 +6,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/zricethezav/gitleaks/v8/ucmp"
 	"os"
+	"path"
+	"runtime"
 )
 
 func init() {
@@ -52,10 +54,21 @@ func runEnable(cmd *cobra.Command, args []string) {
 
 	// Insert Script Content in $HOME/.githooks pre-commit, post-commit
 
-	// 3. Install Global Git Hooks (pre-commit, post-commit)
+	// 기 존재하는 스크립트 삭제하여 Desired Script 로 설정 될 수 있도록 함
+	ucmp.RemoveGitHookScript(ucmp.PreCommitScriptPath)
+	ucmp.RemoveGitHookScript(ucmp.PostCommitScriptPath)
+
+	// 3. Install Global Git Hooks
 	ucmp.InstallGitHookScript(ucmp.PreCommitScriptPath, ucmp.LocalPreCommitSupportScript)
-	ucmp.InstallGitHookScript(ucmp.PreCommitScriptPath, ucmp.PreCommitScript)
-	ucmp.InstallGitHookScript(ucmp.PostCommitScriptPath, ucmp.PostCommitScript)
+
+	switch runtime.GOOS {
+	case "windows":
+		ucmp.InstallGitHookScript(ucmp.PreCommitScriptPath, path.Join(ucmp.WindowsBinaryInstallPath, "\\", ucmp.PreCommitScript))
+		ucmp.InstallGitHookScript(ucmp.PostCommitScriptPath, path.Join(ucmp.WindowsBinaryInstallPath, "\\", ucmp.PostCommitScript))
+	default:
+		ucmp.InstallGitHookScript(ucmp.PreCommitScriptPath, path.Join(ucmp.LinuxBinaryInstallPath, "/", ucmp.PreCommitScript))
+		ucmp.InstallGitHookScript(ucmp.PostCommitScriptPath, path.Join(ucmp.LinuxBinaryInstallPath, "/", ucmp.PostCommitScript))
+	}
 
 	log.Info().Msg("Gitleaks Enabled")
 }

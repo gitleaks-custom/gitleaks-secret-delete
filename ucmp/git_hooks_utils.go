@@ -13,6 +13,8 @@ const (
 	CoreHooksPath               = ".githooks"
 	PreCommitScriptPath         = CoreHooksPath + "/pre-commit"
 	PostCommitScriptPath        = CoreHooksPath + "/post-commit"
+	WindowsBinaryInstallPath    = "C:\\Windows\\"
+	LinuxBinaryInstallPath      = "/usr/local/bin"
 	PreCommitScript             = "gitleaks protect --no-banner --verbose --staged"
 	PostCommitScript            = "gitleaks audit"
 	LocalPreCommitSupportScript = `
@@ -106,6 +108,20 @@ func UninstallGitHookScript(filepath string, script string) {
 	err := os.WriteFile(filepath, []byte(newContent), 0755)
 	if err != nil {
 		fmt.Printf("Error Removing Git Hook Script: %v\n", err)
+		return
+	}
+}
+
+func RemoveGitHookScript(filepath string) {
+	ensureHooksPath()
+
+	// Override the filepath to be under the user's home directory
+	homeDir, _ := os.UserHomeDir()
+	filepath = path.Join(homeDir, filepath)
+
+	err := os.Remove(filepath)
+	if err != nil {
+		// fmt.Printf("Error Removing Git Hook Script: %v\n", err)
 		return
 	}
 }
