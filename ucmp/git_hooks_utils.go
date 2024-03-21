@@ -13,8 +13,8 @@ const (
 	CoreHooksPath               = ".githooks"
 	PreCommitScriptPath         = CoreHooksPath + "/pre-commit"
 	PostCommitScriptPath        = CoreHooksPath + "/post-commit"
-	WindowsBinaryInstallPath    = "C:\\Windows\\"
-	LinuxBinaryInstallPath      = "/usr/local/bin"
+	WindowsBinaryInstallPath    = "C:/Windows/"
+	LinuxBinaryInstallPath      = "/usr/local/bin/"
 	PreCommitScript             = "gitleaks protect --no-banner --verbose --staged"
 	PostCommitScript            = "gitleaks audit"
 	LocalPreCommitSupportScript = `

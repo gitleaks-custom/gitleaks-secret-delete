@@ -63,11 +63,11 @@ func runEnable(cmd *cobra.Command, args []string) {
 
 	switch runtime.GOOS {
 	case "windows":
-		ucmp.InstallGitHookScript(ucmp.PreCommitScriptPath, path.Join(ucmp.WindowsBinaryInstallPath, "\\", ucmp.PreCommitScript))
-		ucmp.InstallGitHookScript(ucmp.PostCommitScriptPath, path.Join(ucmp.WindowsBinaryInstallPath, "\\", ucmp.PostCommitScript))
+		ucmp.InstallGitHookScript(ucmp.PreCommitScriptPath, path.Join(ucmp.WindowsBinaryInstallPath, ucmp.PreCommitScript))
+		ucmp.InstallGitHookScript(ucmp.PostCommitScriptPath, path.Join(ucmp.WindowsBinaryInstallPath, ucmp.PostCommitScript))
 	default:
-		ucmp.InstallGitHookScript(ucmp.PreCommitScriptPath, path.Join(ucmp.LinuxBinaryInstallPath, "/", ucmp.PreCommitScript))
-		ucmp.InstallGitHookScript(ucmp.PostCommitScriptPath, path.Join(ucmp.LinuxBinaryInstallPath, "/", ucmp.PostCommitScript))
+		ucmp.InstallGitHookScript(ucmp.PreCommitScriptPath, path.Join(ucmp.LinuxBinaryInstallPath, ucmp.PreCommitScript))
+		ucmp.InstallGitHookScript(ucmp.PostCommitScriptPath, path.Join(ucmp.LinuxBinaryInstallPath, ucmp.PostCommitScript))
 	}
 
 	log.Info().Msg("Gitleaks Enabled")
