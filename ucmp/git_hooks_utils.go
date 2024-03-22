@@ -31,14 +31,22 @@ fi
 `
 )
 
-func ensureHooksPath() {
-	homeDir, _ := os.UserHomeDir()
-	filepath := path.Join(homeDir, CoreHooksPath)
+func _ensurePathDirectory(paths ...string) {
+	filepath := path.Join(paths...)
 
 	_, err := os.Stat(filepath)
 	if err != nil {
 		_ = os.Mkdir(filepath, 0755)
 	}
+}
+
+func EnsurePathDirectory(paths ...string) {
+	_ensurePathDirectory(paths...)
+}
+
+func ensurePathDirectory(_path string) {
+	homeDir, _ := os.UserHomeDir()
+	_ensurePathDirectory(homeDir, _path)
 }
 
 func getFileContents(filepath string) (string, error) {
@@ -53,7 +61,7 @@ func getFileContents(filepath string) (string, error) {
 }
 
 func InstallGitHookScript(filepath string, script string) {
-	ensureHooksPath()
+	ensurePathDirectory(CoreHooksPath)
 
 	// Override the filepath to be under the user's home directory
 	homeDir, _ := os.UserHomeDir()
@@ -91,7 +99,7 @@ func InstallGitHookScript(filepath string, script string) {
 }
 
 func UninstallGitHookScript(filepath string, script string) {
-	ensureHooksPath()
+	ensurePathDirectory(CoreHooksPath)
 
 	// Override the filepath to be under the user's home directory
 	homeDir, _ := os.UserHomeDir()
@@ -113,7 +121,7 @@ func UninstallGitHookScript(filepath string, script string) {
 }
 
 func RemoveGitHookScript(filepath string) {
-	ensureHooksPath()
+	ensurePathDirectory(CoreHooksPath)
 
 	// Override the filepath to be under the user's home directory
 	homeDir, _ := os.UserHomeDir()

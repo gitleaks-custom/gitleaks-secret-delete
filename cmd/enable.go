@@ -10,11 +10,14 @@ import (
 	"runtime"
 )
 
+const BINARY_INSTALL_PATH_KEY = "install-path"
+
 func init() {
-	enableCmd.Flags().String(string(ucmp.AUDIT_CONFIG_KEY_URL), "", "Audit Backend Url (Default : https://audit.ucmp.uplus.co.kr/gitleaks/)")
+	enableCmd.Flags().String(string(ucmp.AUDIT_CONFIG_KEY_URL), "https://audit.ucmp.uplus.co.kr/gitleaks", "Audit Backend Url (Default : https://audit.ucmp.uplus.co.kr/gitleaks/)")
+	enableCmd.Flags().String(BINARY_INSTALL_PATH_KEY, "", "Gitleaks Binary Install Path (Default : /usr/local/bin/ for linux, C:/Windows/ for windows")
 	enableCmd.Flags().Bool(string(ucmp.AUDIT_CONFIG_KEY_DEBUG), false, "Enable debug output")
 	enableCmd.Flags().Int64(string(ucmp.AUDIT_CONFIG_KEY_TIMEOUT), 0, "Audit Backend Timeout (Default : 5 Seconds")
-	enableCmd.MarkFlagRequired(string(ucmp.AUDIT_CONFIG_KEY_URL))
+	// enableCmd.MarkFlagRequired(string(ucmp.AUDIT_CONFIG_KEY_URL))
 	rootCmd.AddCommand(enableCmd)
 }
 
@@ -58,16 +61,27 @@ func runEnable(cmd *cobra.Command, args []string) {
 	ucmp.RemoveGitHookScript(ucmp.PreCommitScriptPath)
 	ucmp.RemoveGitHookScript(ucmp.PostCommitScriptPath)
 
+	// If Specified Install Path, Ensure the Path Exists
+	binaryInstallPath, _ := cmd.Flags().GetString(BINARY_INSTALL_PATH_KEY)
+	if len(binaryInstallPath) != 0 {
+		ucmp.EnsurePathDirectory(binaryInstallPath)
+	}
+
 	// 3. Install Global Git Hooks
 	ucmp.InstallGitHookScript(ucmp.PreCommitScriptPath, ucmp.LocalPreCommitSupportScript)
 
-	switch runtime.GOOS {
-	case "windows":
-		ucmp.InstallGitHookScript(ucmp.PreCommitScriptPath, path.Join(ucmp.WindowsBinaryInstallPath, ucmp.PreCommitScript))
-		ucmp.InstallGitHookScript(ucmp.PostCommitScriptPath, path.Join(ucmp.WindowsBinaryInstallPath, ucmp.PostCommitScript))
-	default:
-		ucmp.InstallGitHookScript(ucmp.PreCommitScriptPath, path.Join(ucmp.LinuxBinaryInstallPath, ucmp.PreCommitScript))
-		ucmp.InstallGitHookScript(ucmp.PostCommitScriptPath, path.Join(ucmp.LinuxBinaryInstallPath, ucmp.PostCommitScript))
+	if len(binaryInstallPath) != 0 {
+		ucmp.InstallGitHookScript(ucmp.PreCommitScriptPath, path.Join(binaryInstallPath, ucmp.PreCommitScript))
+		ucmp.InstallGitHookScript(ucmp.PostCommitScriptPath, path.Join(binaryInstallPath, ucmp.PostCommitScript))
+	} else {
+		switch runtime.GOOS {
+		case "windows":
+			ucmp.InstallGitHookScript(ucmp.PreCommitScriptPath, path.Join(ucmp.WindowsBinaryInstallPath, ucmp.PreCommitScript))
+			ucmp.InstallGitHookScript(ucmp.PostCommitScriptPath, path.Join(ucmp.WindowsBinaryInstallPath, ucmp.PostCommitScript))
+		default:
+			ucmp.InstallGitHookScript(ucmp.PreCommitScriptPath, path.Join(ucmp.LinuxBinaryInstallPath, ucmp.PreCommitScript))
+			ucmp.InstallGitHookScript(ucmp.PostCommitScriptPath, path.Join(ucmp.LinuxBinaryInstallPath, ucmp.PostCommitScript))
+		}
 	}
 
 	log.Info().Msg("Gitleaks Enabled")
